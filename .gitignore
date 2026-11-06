@@ -1,0 +1,15 @@
+.env
+.env.*
+*.keystore
+*.jks
+*.pem
+*.p12
+*.key
+*service-account*.json
+*serviceAccount*.json
+node_modules/
+.firebase/
+*.log
+*.zip
+backups/
+.git/

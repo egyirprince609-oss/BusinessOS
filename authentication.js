@@ -1,4 +1,3 @@
-
 /*
  * BUSINESSOS - CENTRAL AUTHENTICATION AND IDENTITY SERVICE
  * Firebase Project: business-os-by
@@ -782,7 +781,6 @@ export function getCurrentUserIdentity() {
 }
 
 
-
 // ============================================================
 // NATIVE ANDROID / iOS APP DETECTION
 // ============================================================
@@ -913,151 +911,244 @@ export async function ensureUserProfile(
     }
 
 
+    /*
+     * Refresh the Firebase user before building the profile payload.
+     * This keeps emailVerified and the ID-token claims in sync with
+     * the values checked by the deployed Firestore Rules.
+     */
+
+    await reload(user);
+
+    await getIdToken(user, true);
+
+
     const profileRef = getUserProfileReference(
         user.uid
     );
 
 
-    const providerIds = (user.providerData || [])
+    const providerIds = [
 
-        .map(item => cleanText(item.providerId, 80))
+        ...new Set(
 
-        .filter(Boolean);
+            (user.providerData || [])
 
+                .map(item => cleanText(item?.providerId, 80))
 
-    const displayName = cleanText(
+                .filter(Boolean)
 
-        options.displayName || user.displayName || "",
+        )
 
-        80
-
-    );
-
-
-    const photoURL =
-
-        user.photoURL && /^https:\/\//i.test(user.photoURL)
-
-            ? user.photoURL
-
-            : null;
+    ].slice(0, 5);
 
 
-    const email = user.email
-        ? normalizeEmail(user.email)
+    // Firebase's email claim is compared exactly by the Firestore Rules.
+    // Do not lowercase or otherwise transform this value before saving it.
+
+    const email = typeof user.email === "string"
+        ? user.email
         : null;
 
 
-    // Ensure Firestore receives the latest email_verified claim.
-
-    await getIdToken(user, true);
+    const emailVerified = Boolean(user.emailVerified);
 
 
-    const snapshot = await getDoc(profileRef);
+    const optionDisplayName = cleanText(
+        options.displayName,
+        80
+    );
 
 
-    if (!snapshot.exists()) {
-
-        const data = {
-
-            uid: user.uid,
-
-            email,
-
-            displayName,
-
-            photoURL,
-
-            emailVerified: Boolean(user.emailVerified),
-
-            providerIds,
-
-            accountStatus: "active",
-
-            onboardingStatus: "needs_profile",
-
-            preferredLanguage: "en",
-
-            country: null,
-
-            termsAccepted: options.acceptedTerms === true,
-
-            signupAttribution: makeSafeAttribution(),
-
-            createdAt: serverTimestamp(),
-
-            updatedAt: serverTimestamp()
-
-        };
+    const authDisplayName = cleanText(
+        user.displayName,
+        80
+    );
 
 
-        await setDoc(
-            profileRef,
-            data
+    const authPhotoURL =
+        typeof user.photoURL === "string" &&
+        /^https:\/\//i.test(user.photoURL) &&
+        user.photoURL.length <= 2048
+            ? user.photoURL
+            : null;
+
+
+    const attribution = makeSafeAttribution();
+
+
+    /*
+     * Use a transaction so two simultaneous sign-in/profile-sync
+     * operations cannot both decide that the same profile is missing.
+     */
+
+    await runTransaction(
+
+        db,
+
+        async (transaction) => {
+
+            const snapshot = await transaction.get(
+                profileRef
+            );
+
+
+            const existingData = snapshot.exists()
+                ? snapshot.data()
+                : {};
+
+
+            const savedDisplayName =
+                typeof existingData.displayName === "string" &&
+                existingData.displayName.length <= 80
+                    ? existingData.displayName
+                    : "";
+
+
+            const displayName =
+                optionDisplayName ||
+                authDisplayName ||
+                savedDisplayName ||
+                "";
+
+
+            // Preserve a profile photo already saved in Firestore when
+            // Firebase Authentication does not provide a current photo.
+
+            const savedPhotoURL =
+                typeof existingData.photoURL === "string" &&
+                existingData.photoURL.length <= 2048
+                    ? existingData.photoURL
+                    : null;
+
+
+            const photoURL = authPhotoURL || savedPhotoURL || null;
+
+
+            if (!snapshot.exists()) {
+
+                const data = {
+
+                    uid: user.uid,
+
+                    email,
+
+                    displayName,
+
+                    photoURL,
+
+                    emailVerified,
+
+                    providerIds,
+
+                    accountStatus: "active",
+
+                    onboardingStatus: "needs_profile",
+
+                    preferredLanguage: "en",
+
+                    country: null,
+
+                    ...(options.acceptedTerms === true
+                        ? { termsAccepted: true }
+                        : {}),
+
+                    signupAttribution: attribution,
+
+                    createdAt: serverTimestamp(),
+
+                    updatedAt: serverTimestamp()
+
+                };
+
+
+                transaction.set(
+                    profileRef,
+                    data
+                );
+
+
+                return;
+
+            }
+
+
+            /*
+             * UID is an immutable identity field in the deployed rules.
+             * A legacy document with a different/missing UID cannot safely
+             * be repaired by a normal client update, so report it clearly.
+             */
+
+            if (existingData.uid !== user.uid) {
+
+                throw new Error(
+                    "Your existing BusinessOS profile has an invalid UID. Contact support to repair this profile securely."
+                );
+
+            }
+
+
+            const updates = {
+
+                email,
+
+                displayName,
+
+                photoURL,
+
+                emailVerified,
+
+                providerIds,
+
+                updatedAt: serverTimestamp()
+
+            };
+
+
+            // Firestore Rules allow termsAccepted to be added/changed only
+            // to true. Never write false or treat Google sign-in as consent.
+
+            if (
+                options.acceptedTerms === true &&
+                existingData.termsAccepted !== true
+            ) {
+
+                updates.termsAccepted = true;
+
+            }
+
+
+            transaction.update(
+                profileRef,
+                updates
+            );
+
+        }
+
+    );
+
+
+    // Read back the saved document so callers receive the committed values,
+    // not unresolved serverTimestamp() sentinels from the write payload.
+
+    const savedSnapshot = await getDoc(
+        profileRef
+    );
+
+
+    if (!savedSnapshot.exists()) {
+
+        throw new Error(
+            "BusinessOS could not confirm that your user profile was saved. Please try signing in again."
         );
 
-
-        return {
-            uid: user.uid,
-            ...data
-        };
-
     }
-
-
-    const updates = {
-
-        email,
-
-        emailVerified: Boolean(user.emailVerified),
-
-        providerIds,
-
-        updatedAt: serverTimestamp()
-
-    };
-
-
-    // Do not erase a profile name or photo saved in Firestore
-    // when the current Auth provider does not return that field.
-
-    if (displayName) {
-
-        updates.displayName = displayName;
-
-    }
-
-
-    if (photoURL) {
-
-        updates.photoURL = photoURL;
-
-    }
-
-
-    if (
-        options.acceptedTerms === true &&
-        snapshot.data().termsAccepted !== true
-    ) {
-
-        updates.termsAccepted = true;
-
-    }
-
-
-    await updateDoc(
-        profileRef,
-        updates
-    );
 
 
     return {
 
         uid: user.uid,
 
-        ...snapshot.data(),
-
-        ...updates
+        ...savedSnapshot.data()
 
     };
 
@@ -1145,6 +1236,12 @@ export async function updateUserProfile({
         );
 
     }
+
+
+    // Ensure the profile exists and is synchronized before applying
+    // profile edits. updateDoc() cannot create a missing document.
+
+    await ensureUserProfile(user);
 
 
     const authUpdates = {};
@@ -2235,13 +2332,8 @@ export async function loginWithGoogle() {
         await reload(credential.user);
 
 
-        await ensureUserProfile(
-
-            credential.user,
-
-            { acceptedTerms: true }
-
-        );
+        // Google sign-in is not, by itself, acceptance of the Terms.
+        await ensureUserProfile(credential.user);
 
 
         markReturningUser();
@@ -2327,13 +2419,8 @@ export async function completeGoogleRedirect() {
         }
 
 
-        await ensureUserProfile(
-
-            result.user,
-
-            { acceptedTerms: true }
-
-        );
+        // Google sign-in is not, by itself, acceptance of the Terms.
+        await ensureUserProfile(result.user);
 
 
         markReturningUser();
@@ -3923,7 +4010,7 @@ export const BusinessOSAuth = Object.freeze({
     getFirebaseIdToken,
 
     isAuthenticated,
-    
+
     isNativeBusinessOSApp,
 
     isEmailPasswordUser,
