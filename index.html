@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#010d2e">
+  <meta name="color-scheme" content="dark">
+  <title>Welcome</title>
+
+  <style>
+    :root {
+      --navy: #010d2e;
+      --blue: #0755c9;
+      --cyan: #16c8f5;
+      --soft-blue: #b9dcff;
+      --soft-green: #b9f3d7;
+      --soft-peach: #ffe0bd;
+      --soft-red: #ffc6d0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      min-height: 100svh;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      padding: 24px 12px 76px;
+      background:
+        radial-gradient(ellipse at 90% 8%, rgba(0, 55, 135, 0.28), transparent 48%),
+        radial-gradient(ellipse at 10% 90%, rgba(0, 37, 103, 0.18), transparent 48%),
+        linear-gradient(135deg, #010b27 0%, #010d2e 52%, #011746 100%);
+      color: #ffffff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .splash-stage {
+      width: 100%;
+      display: grid;
+      place-items: center;
+    }
+
+    .logo-frame {
+      position: relative;
+      width: min(88vw, 630px);
+      aspect-ratio: 1 / 1;
+      padding: 2px;
+      overflow: hidden;
+      border-radius: 25px;
+      background: linear-gradient(
+        135deg,
+        rgba(22, 200, 245, 0.78),
+        rgba(9, 91, 220, 0.34) 34%,
+        rgba(1, 13, 46, 0.94) 63%,
+        rgba(30, 123, 255, 0.55)
+      );
+      background-size: 220% 220%;
+      box-shadow:
+        0 0 24px rgba(0, 118, 255, 0.13),
+        0 0 58px rgba(0, 76, 190, 0.12);
+      animation: borderFlow 7s ease-in-out infinite, logoPulse 3.2s ease-in-out infinite;
+      will-change: transform, background-position;
+    }
+
+    .logo-frame::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: inherit;
+      pointer-events: none;
+      box-shadow: inset 0 0 18px rgba(0, 173, 255, 0.10);
+    }
+
+    .brand-logo {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 23px;
+      background: var(--navy);
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .status-area {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 16px;
+    }
+
+    .status-line {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 22px;
+      text-align: center;
+    }
+
+    .status-line small {
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 500;
+      letter-spacing: 0.025em;
+      color: var(--soft-blue);
+      transition: color 220ms ease;
+    }
+
+    .status-line.success small {
+      color: var(--soft-green);
+    }
+
+    .status-line.notice small {
+      color: var(--soft-peach);
+    }
+
+    .status-line.error small {
+      color: var(--soft-red);
+    }
+
+    .loader {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
+      border: 2px solid rgba(185, 220, 255, 0.22);
+      border-top-color: #9edcff;
+      border-right-color: #37bdf3;
+      border-radius: 50%;
+      animation: spin 850ms linear infinite;
+    }
+
+    .status-line.success .loader {
+      border-color: rgba(185, 243, 215, 0.25);
+      border-top-color: var(--soft-green);
+    }
+
+    .status-line.notice .loader {
+      border-color: rgba(255, 224, 189, 0.25);
+      border-top-color: var(--soft-peach);
+    }
+
+    .status-line.error .loader {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes logoPulse {
+      0%, 100% {
+        transform: scale(0.975);
+        box-shadow: 0 0 20px rgba(0, 118, 255, 0.12), 0 0 42px rgba(0, 76, 190, 0.10);
+      }
+      50% {
+        transform: scale(1.015);
+        box-shadow: 0 0 30px rgba(0, 160, 255, 0.22), 0 0 66px rgba(0, 76, 190, 0.16);
+      }
+    }
+
+    @keyframes borderFlow {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    @media (max-width: 420px) {
+      body {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      .logo-frame {
+        width: min(91vw, 630px);
+        border-radius: 20px;
+      }
+
+      .brand-logo {
+        border-radius: 18px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="splash-stage" aria-label="Welcome">
+    <div class="logo-frame">
+      <img
+        class="brand-logo"
+        src="logo.png"
+        alt="BusinessOS logo"
+        draggable="false"
+      >
+    </div>
+  </main>
+
+  <div class="status-area" role="status" aria-live="polite" aria-atomic="true">
+    <div class="status-line" id="statusLine">
+      <span class="loader" aria-hidden="true"></span>
+      <small id="statusMessage">Synchronizing...</small>
+    </div>
+  </div>
+<script></script>
+  <script type="module">
+    const firebaseConfig = {
+      apiKey: "AIzaSyCaItsHbMSCA-jKJ5IldpRD0NEW_M9eJ68",
+      authDomain: "business-os-by.firebaseapp.com",
+      projectId: "business-os-by",
+      storageBucket: "business-os-by.firebasestorage.app",
+      messagingSenderId: "970110196253",
+      appId: "1:970110196253:web:c7f9f4472f6e084c5544f4",
+      measurementId: "G-KBGYD6D73L"
+    };
+
+    const statusLine = document.getElementById("statusLine");
+    const statusMessage = document.getElementById("statusMessage");
+    let redirectStarted = false;
+
+    function updateStatus(message, state = "loading") {
+      statusMessage.textContent = message;
+      statusLine.className = `status-line ${state}`;
+    }
+
+    function hasUsedBusinessOSOnThisDevice() {
+      try {
+        return localStorage.getItem("businessOS_account_seen") === "true";
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function openPage(page) {
+      if (redirectStarted) return;
+      redirectStarted = true;
+      window.setTimeout(() => {
+        window.location.replace(page);
+      }, 850);
+    }
+
+    async function startBusinessOS() {
+      updateStatus("Synchronizing...", "loading");
+
+      try {
+        const firebaseVersion = "13.2.0";
+        const [appSDK, authSDK] = await Promise.all([
+          import(`https://www.gstatic.com/firebasejs/${firebaseVersion}/firebase-app.js`),
+          import(`https://www.gstatic.com/firebasejs/${firebaseVersion}/firebase-auth.js`)
+        ]);
+
+        const app = appSDK.initializeApp(firebaseConfig);
+        const auth = authSDK.getAuth(app);
+
+        try {
+          await authSDK.setPersistence(auth, authSDK.browserLocalPersistence);
+        } catch (persistenceError) {
+          // Continue with Firebase's available browser persistence setting.
+          console.warn("Session persistence could not be changed:", persistenceError);
+        }
+
+        updateStatus("Checking your account...", "loading");
+
+        authSDK.onAuthStateChanged(
+          auth,
+          (user) => {
+            if (user) {
+              updateStatus("Account found. Welcome back.", "success");
+              openPage("menu.html");
+              return;
+            }
+
+            if (hasUsedBusinessOSOnThisDevice()) {
+              updateStatus("No active session. Opening sign in...", "notice");
+              openPage("login.html");
+            } else {
+              updateStatus("Ready to get started.", "notice");
+              openPage("signup.html");
+            }
+          },
+          (authError) => {
+            console.error("BusinessOS authentication check failed:", authError);
+            updateStatus("Unable to check your account. Please try again.", "error");
+          }
+        );
+      } catch (error) {
+        console.error("BusinessOS could not connect to Firebase:", error);
+        updateStatus("Connection unavailable. Check your internet connection.", "error");
+      }
+    }
+
+    startBusinessOS();
+  </script>
+</body>
+</html>
