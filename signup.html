@@ -1,0 +1,2112 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#07152e">
+  <meta name="referrer" content="no-referrer">
+
+  <title>Create Account | BusinessOS</title>
+
+  <link rel="icon" href="./logo.png" type="image/png">
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  >
+
+  <style>
+    :root {
+      --bg: #061329;
+      --panel: #0d2040;
+      --blue: #287cf5;
+      --blue2: #54a0ff;
+      --text: #edf4ff;
+      --muted: #a9bbd5;
+      --border: rgba(255,255,255,.13);
+      --green: #20c997;
+      --red: #ff697d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100svh;
+      width: 100%;
+
+      display: grid;
+      place-items: center;
+
+      padding: 22px 14px;
+      overflow-x: hidden;
+
+      background:
+        radial-gradient(
+          circle at 50% 0,
+          rgba(40,124,245,.22),
+          transparent 42%
+        ),
+        linear-gradient(
+          145deg,
+          #030b19,
+          #0a1b37 58%,
+          #061329
+        );
+
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 480px;
+      margin: auto;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+
+      text-align: center;
+    }
+
+    .brand {
+      width: 100%;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 100px;
+      height: 100px;
+
+      border-radius: 25px;
+
+      object-fit: contain;
+
+      background: rgba(255,255,255,.04);
+
+      border: 2px solid rgba(84,160,255,.35);
+
+      box-shadow:
+        0 0 35px rgba(40,124,245,.16);
+    }
+
+    .brand h1 {
+      font-size: clamp(26px, 6vw, 34px);
+      font-weight: 800;
+      letter-spacing: -.7px;
+    }
+
+    .brand p {
+      max-width: 360px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .card {
+      width: 100%;
+      padding: 15px 15px;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+
+      background: rgba(13,32,64,.96);
+
+      border: 1px solid var(--border);
+      border-radius: 25px;
+
+      box-shadow: 0 24px 65px rgba(0,0,0,.34);
+
+      backdrop-filter: blur(15px);
+    }
+
+    .card[hidden] {
+      display: none !important;
+    }
+
+    .heading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+    }
+
+    .heading-icon {
+      width: 54px;
+      height: 54px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 18px;
+      background: rgba(40,124,245,.16);
+
+      color: var(--blue2);
+      font-size: 22px;
+    }
+
+    .heading h2 {
+      font-size: 23px;
+    }
+
+    .heading p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .form {
+      width: 100%;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .field {
+      width: 100%;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .field label {
+      width: 100%;
+
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+
+      color: #dce9ff;
+    }
+
+    .input-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .input-wrap > i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+
+      color: #91b5e8;
+      pointer-events: none;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      height: 49px;
+
+      padding: 11px 43px;
+
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 13px;
+
+      outline: none;
+
+      background: rgba(255,255,255,.055);
+      color: #fff;
+
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .input-wrap input::placeholder {
+      color: #879bb9;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--blue2);
+      box-shadow: 0 0 0 3px rgba(40,124,245,.14);
+    }
+
+    .toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+
+      padding: 7px;
+      border: 0;
+
+      background: transparent;
+      color: #adcaf1;
+    }
+
+    .strength {
+      width: 100%;
+
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .strength-label {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 7px;
+
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .track {
+      height: 6px;
+      background: rgba(255,255,255,.12);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0;
+
+      background: var(--blue2);
+      border-radius: 20px;
+
+      transition: width .2s;
+    }
+
+    .rules {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      grid-template-rows: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .rule {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+
+      color: #91a6c5;
+      font-size: 11px;
+    }
+
+    .rule.valid {
+      color: var(--green);
+    }
+
+    .terms {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 9px;
+
+      width: 100%;
+
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .terms input {
+      margin-top: 3px;
+      accent-color: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .terms a,
+    .link {
+      color: #8fbeff;
+      text-decoration: none;
+    }
+
+    .terms a:hover,
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    .btn {
+      width: 100%;
+      min-height: 49px;
+
+      border: 0;
+      border-radius: 13px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+
+      font-size: 14px;
+      font-weight: 750;
+
+      transition: .2s;
+    }
+
+    .primary {
+      background: linear-gradient(
+        110deg,
+        #1769e8,
+        #398eff
+      );
+
+      color: white;
+
+      box-shadow: 0 8px 23px rgba(40,124,245,.2);
+    }
+
+    .primary:disabled {
+      opacity: .48;
+      cursor: not-allowed;
+    }
+
+    .secondary {
+      background: rgba(255,255,255,.075);
+      border: 1px solid var(--border);
+      color: white;
+    }
+
+    .google {
+      background: white;
+      color: #17263e;
+      border: 1px solid #dce5f3;
+    }
+
+    .separator {
+      width: 100%;
+
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      color: #91a5c2;
+      font-size: 11px;
+    }
+
+    .separator:before,
+    .separator:after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: var(--border);
+    }
+
+    .notice {
+      display: none;
+
+      width: 100%;
+      padding: 12px;
+
+      border-radius: 12px;
+
+      font-size: 12px;
+      line-height: 1.6;
+
+      overflow-wrap: anywhere;
+    }
+
+    .notice.show {
+      display: block;
+    }
+
+    .notice.info {
+      background: rgba(40,124,245,.13);
+      border: 1px solid rgba(40,124,245,.3);
+      color: #c8deff;
+    }
+
+    .notice.success {
+      background: rgba(32,201,151,.12);
+      border: 1px solid rgba(32,201,151,.3);
+      color: #9cf0d8;
+    }
+
+    .notice.error {
+      background: rgba(255,105,125,.11);
+      border: 1px solid rgba(255,105,125,.3);
+      color: #ffb6c0;
+    }
+
+    .email-value {
+      font-weight: 800;
+      color: white;
+      overflow-wrap: anywhere;
+    }
+
+    .divider {
+      width: 100%;
+      border: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    details {
+      width: 100%;
+    }
+
+    summary {
+      list-style-position: inside;
+      cursor: pointer;
+      color: #a4c8ff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    details[open] .form {
+      margin-top: 15px;
+    }
+
+    .footer {
+      width: 100%;
+      color: #849ab9;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+
+    .footer a {
+      color: #a7caff;
+      text-decoration: none;
+    }
+
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media(max-width:380px) {
+      body {
+        padding: 16px 10px;
+      }
+
+      .card {
+        padding: 22px 15px;
+      }
+
+      .logo {
+        width: 115px;
+        height: 115px;
+      }
+
+      .rules {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="page">
+
+    <header class="brand">
+
+     
+      
+
+    </header>
+
+
+    <!-- REGISTRATION PANEL -->
+
+    <section class="card" id="signupCard">
+         <img
+        class="logo"
+        src="./logo.png"
+        alt="BusinessOS logo"
+      >
+
+      <h1>BusinessOS</h1>
+      <p>
+        Connect with businesses, reach customers,
+        manage operations and grow with one connected
+        business platform.
+      </p>
+
+      <div class="heading">
+
+        <h2>Create your account</h2>
+
+        <p>
+          Enter your details to get started with BusinessOS.
+        </p>
+
+      </div>
+
+
+      <div
+        class="notice"
+        id="signupNotice"
+        role="status"
+        aria-live="polite"
+      ></div>
+
+
+      <button
+        class="btn google"
+        id="googleButton"
+        type="button"
+      >
+        <i class="fa-brands fa-google"></i>
+        Continue with Google
+      </button>
+
+
+      <div class="separator">
+        OR CONTINUE WITH EMAIL
+      </div>
+
+
+      <form
+        class="form"
+        id="signupForm"
+        novalidate
+      >
+
+        <div class="field">
+
+          <label for="displayName">
+            Full name
+          </label>
+
+          <div class="input-wrap">
+
+            <i class="fa-solid fa-user"></i>
+
+            <input
+              id="displayName"
+              type="text"
+              maxlength="80"
+              minlength="2"
+              autocomplete="name"
+              placeholder="Enter your full name"
+              required
+            >
+
+          </div>
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="email">
+            Email address
+          </label>
+
+          <div class="input-wrap">
+
+            <i class="fa-solid fa-envelope"></i>
+
+            <input
+              id="email"
+              type="email"
+              maxlength="254"
+              autocomplete="email"
+              placeholder="Enter your email address"
+              required
+            >
+
+          </div>
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="password">
+            Password
+          </label>
+
+          <div class="input-wrap">
+
+            <i class="fa-solid fa-lock"></i>
+
+            <input
+              id="password"
+              type="password"
+              maxlength="400"
+              autocomplete="new-password"
+              placeholder="Create a strong password"
+              required
+            >
+
+            <button
+              class="toggle"
+              type="button"
+              id="togglePassword"
+              aria-label="Show password"
+            >
+              <i class="fa-solid fa-eye"></i>
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div class="strength">
+
+          <div class="strength-label">
+
+            <span>Password strength</span>
+
+            <strong id="strengthText">
+              Not entered
+            </strong>
+
+          </div>
+
+
+          <div
+            class="track"
+            role="progressbar"
+            aria-label="Password strength"
+            aria-valuemin="0"
+            aria-valuemax="4"
+            aria-valuenow="0"
+            id="strengthTrack"
+          >
+            <div
+              class="fill"
+              id="strengthFill"
+            ></div>
+          </div>
+
+
+          <div class="rules">
+
+            <span class="rule" id="ruleLength">
+              <i class="fa-solid fa-circle-xmark"></i>
+              6-400 characters
+            </span>
+
+            <span class="rule" id="ruleUpper">
+              <i class="fa-solid fa-circle-xmark"></i>
+              Uppercase letter
+            </span>
+
+            <span class="rule" id="ruleLower">
+              <i class="fa-solid fa-circle-xmark"></i>
+              Lowercase letter
+            </span>
+
+            <span class="rule" id="ruleSpecial">
+              <i class="fa-solid fa-circle-xmark"></i>
+              Special character
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="confirmPassword">
+            Confirm password
+          </label>
+
+          <div class="input-wrap">
+
+            <i class="fa-solid fa-shield-halved"></i>
+
+            <input
+              id="confirmPassword"
+              type="password"
+              maxlength="400"
+              autocomplete="new-password"
+              placeholder="Enter your password again"
+              required
+            >
+
+            <button
+              class="toggle"
+              type="button"
+              id="toggleConfirmPassword"
+              aria-label="Show confirmation password"
+            >
+              <i class="fa-solid fa-eye"></i>
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <label class="terms">
+
+          <input
+            id="acceptTerms"
+            type="checkbox"
+          >
+
+          <span>
+            I agree to the
+            <a
+              href="./terms.html"
+              target="_blank"
+              rel="noopener"
+            >
+              Terms of Service
+            </a>
+            and the BusinessOS Privacy Notice.
+          </span>
+
+        </label>
+
+
+        <button
+          class="btn primary"
+          id="signupButton"
+          type="submit"
+          disabled
+        >
+          <i class="fa-solid fa-user-plus"></i>
+          Create BusinessOS Account
+        </button>
+
+      </form>
+
+
+      <hr class="divider">
+
+
+      <!-- EXISTING UNVERIFIED ACCOUNT -->
+
+      <details id="existingAccountDetails">
+
+        <summary>
+          Already registered? Verify your existing account
+        </summary>
+
+
+        <form
+          class="form"
+          id="existingAccountForm"
+          novalidate
+        >
+
+          <div class="field">
+
+            <label for="existingEmail">
+              Registered email
+            </label>
+
+            <div class="input-wrap">
+
+              <i class="fa-solid fa-envelope"></i>
+
+              <input
+                id="existingEmail"
+                type="email"
+                maxlength="254"
+                autocomplete="email"
+                placeholder="Your registered email"
+                required
+              >
+
+            </div>
+
+          </div>
+
+
+          <div class="field">
+
+            <label for="existingPassword">
+              Password
+            </label>
+
+            <div class="input-wrap">
+
+              <i class="fa-solid fa-lock"></i>
+
+              <input
+                id="existingPassword"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Your account password"
+                required
+              >
+
+            </div>
+
+          </div>
+
+
+          <button
+            class="btn secondary"
+            id="existingButton"
+            type="submit"
+          >
+            <i class="fa-solid fa-envelope-circle-check"></i>
+            Sign in and check verification
+          </button>
+
+
+          <p style="font-size:12px;color:var(--muted)">
+
+            Forgot your password?
+
+            <a
+              class="link"
+              href="./forgot.html"
+            >
+              Reset it here
+            </a>.
+
+          </p>
+
+        </form>
+
+      </details>
+
+
+      <p style="font-size:12px;color:var(--muted)">
+
+        Already have a verified account?
+
+        <a
+          class="link"
+          href="./login.html"
+        >
+          Sign in
+        </a>
+
+      </p>
+
+    </section>
+
+
+    <!-- EMAIL VERIFICATION PANEL -->
+
+    <section
+      class="card"
+      id="pendingCard"
+      hidden
+    >
+
+      <div class="heading">
+
+        <div class="heading-icon">
+          <i class="fa-solid fa-envelope-circle-check"></i>
+        </div>
+
+        <h2>Verify your email</h2>
+
+        <p>
+          Your account exists. Confirm that you own
+          this email address to continue.
+        </p>
+
+      </div>
+
+
+      <p style="font-size:13px;color:var(--muted);line-height:1.7">
+
+        Verification address:
+
+        <br>
+
+        <strong
+          class="email-value"
+          id="pendingEmail"
+        ></strong>
+
+      </p>
+
+
+      <div
+        class="notice info show"
+        id="pendingNotice"
+        role="status"
+        aria-live="polite"
+      >
+        Check your inbox and spam folder for the
+        BusinessOS verification email.
+      </div>
+
+
+      <button
+        class="btn primary"
+        id="checkButton"
+        type="button"
+      >
+        <i class="fa-solid fa-circle-check"></i>
+        I have verified my email
+      </button>
+
+
+      <button
+        class="btn secondary"
+        id="resendButton"
+        type="button"
+      >
+        <i class="fa-solid fa-paper-plane"></i>
+        Resend verification email
+      </button>
+
+
+      <button
+        class="btn secondary"
+        id="switchAccountButton"
+        type="button"
+      >
+        <i class="fa-solid fa-right-from-bracket"></i>
+        Use another account
+      </button>
+
+
+      <a
+        class="link"
+        href="./login.html"
+      >
+        Return to sign in
+      </a>
+
+    </section>
+
+
+    <footer class="footer">
+
+      <div>
+        BusinessOS · Developed by Code Academy Solution
+      </div>
+
+      <div>
+        Connect. Communicate. Advertise. Manage. Grow.
+      </div>
+
+      <div>
+        <a href="mailto:codeacademysolutions@gmail.com">
+          Contact Code Academy Solution Support
+        </a>
+      </div>
+
+    </footer>
+
+  </main>
+
+
+  <script type="module">
+
+    import {
+
+      firebaseReady,
+
+      auth,
+
+      captureAttributionFromURL,
+
+      registerWithEmail,
+
+      loginWithEmail,
+
+      loginWithGoogle,
+
+      sendEmailVerification,
+
+      refreshEmailVerification,
+
+      logoutUser,
+
+      getCurrentUser,
+
+      validatePassword,
+
+      getFriendlyError,
+
+      isEmailPasswordUser,
+
+      waitForInitialAuthState
+
+    } from "./authentication.js";
+
+
+    // ======================================================
+    // 1. ELEMENTS
+    // ======================================================
+
+    const $ = (id) =>
+      document.getElementById(id);
+
+
+    const signupCard =
+      $("signupCard");
+
+
+    const pendingCard =
+      $("pendingCard");
+
+
+    const signupNotice =
+      $("signupNotice");
+
+
+    const pendingNotice =
+      $("pendingNotice");
+
+
+    const signupButton =
+      $("signupButton");
+
+
+    const googleButton =
+      $("googleButton");
+
+
+    const existingButton =
+      $("existingButton");
+
+
+    let pendingUser = null;
+
+
+    // ======================================================
+    // 2. NOTIFICATION HELPERS
+    // ======================================================
+
+    function notice(
+      element,
+      message,
+      type = "info"
+    ) {
+
+      element.textContent = message;
+
+      element.className = `notice show ${type}`;
+
+    }
+
+
+    function clearNotice(element) {
+
+      element.textContent = "";
+
+      element.className = "notice";
+
+    }
+
+
+    function messageFor(error) {
+
+      const friendly =
+        getFriendlyError(error);
+
+
+      return friendly.message +
+
+        (
+
+          friendly.code &&
+
+          !friendly.code.startsWith("businessos/") &&
+
+          !friendly.message.includes(friendly.code)
+
+            ? ` [${friendly.code}]`
+
+            : ""
+
+        );
+
+    }
+
+
+    function busy(
+      button,
+      state,
+      text = "Please wait..."
+    ) {
+
+      if (state) {
+
+        button.dataset.restore =
+          button.innerHTML;
+
+
+        button.disabled = true;
+
+
+        button.innerHTML =
+
+          `<i class="fa-solid fa-spinner spinner"></i> ${text}`;
+
+      } else {
+
+        button.disabled = false;
+
+
+        if (button.dataset.restore) {
+
+          button.innerHTML =
+            button.dataset.restore;
+
+        }
+
+      }
+
+    }
+
+
+    function goToWorkspace() {
+
+      window.location.replace(
+        "./menu.html"
+      );
+
+    }
+
+
+    // ======================================================
+    // 3. VERIFICATION PANEL
+    // ======================================================
+
+    function showPending(user, text) {
+
+      pendingUser =
+        user || getCurrentUser();
+
+
+      $("pendingEmail").textContent =
+
+        pendingUser?.email ||
+
+        "Email address unavailable";
+
+
+      signupCard.hidden = true;
+
+      pendingCard.hidden = false;
+
+
+      if (text) {
+
+        notice(
+          pendingNotice,
+          text,
+          "info"
+        );
+
+      }
+
+
+      window.scrollTo({
+
+        top: 0,
+
+        behavior: "smooth"
+
+      });
+
+    }
+
+
+    // ======================================================
+    // 4. PASSWORD VALIDATION
+    // ======================================================
+
+    function setRule(id, valid) {
+
+      const element = $(id);
+
+      element.classList.toggle(
+        "valid",
+        valid
+      );
+
+
+      element.querySelector("i").className =
+
+        valid
+
+          ? "fa-solid fa-circle-check"
+
+          : "fa-solid fa-circle-xmark";
+
+    }
+
+
+    function passwordChecks(value) {
+
+      return {
+
+        length:
+          value.length >= 6 &&
+          value.length <= 400,
+
+        uppercase:
+          /[A-Z]/.test(value),
+
+        lowercase:
+          /[a-z]/.test(value),
+
+        special:
+          /[^A-Za-z0-9\s]/.test(value)
+
+      };
+
+    }
+
+
+    function updatePasswordUI() {
+
+      const password =
+        $("password").value;
+
+
+      const checks =
+        passwordChecks(password);
+
+
+      const score =
+        Object.values(checks).filter(Boolean).length;
+
+
+      $("strengthFill").style.width =
+        `${score * 25}%`;
+
+
+      $("strengthTrack").setAttribute(
+        "aria-valuenow",
+        String(score)
+      );
+
+
+      $("strengthText").textContent =
+
+        password
+
+          ? ["", "Weak", "Fair", "Good", "Strong"][score]
+
+          : "Not entered";
+
+
+      setRule(
+        "ruleLength",
+        checks.length
+      );
+
+
+      setRule(
+        "ruleUpper",
+        checks.uppercase
+      );
+
+
+      setRule(
+        "ruleLower",
+        checks.lowercase
+      );
+
+
+      setRule(
+        "ruleSpecial",
+        checks.special
+      );
+
+
+      const matching =
+
+        $("confirmPassword").value === password &&
+
+        password.length > 0;
+
+
+      signupButton.disabled = !(
+        score === 4 &&
+        matching &&
+        $("acceptTerms").checked
+      );
+
+    }
+
+
+    $("password").addEventListener(
+      "input",
+      updatePasswordUI
+    );
+
+
+    $("confirmPassword").addEventListener(
+      "input",
+      updatePasswordUI
+    );
+
+
+    $("acceptTerms").addEventListener(
+      "change",
+      updatePasswordUI
+    );
+
+
+    // ======================================================
+    // 5. SHOW AND HIDE PASSWORD
+    // ======================================================
+
+    function attachToggle(
+      inputId,
+      buttonId
+    ) {
+
+      $(buttonId).addEventListener(
+        "click",
+        () => {
+
+          const field =
+            $(inputId);
+
+
+          const show =
+            field.type === "password";
+
+
+          field.type =
+            show ? "text" : "password";
+
+
+          $(buttonId).innerHTML =
+
+            show
+
+              ? '<i class="fa-solid fa-eye-slash"></i>'
+
+              : '<i class="fa-solid fa-eye"></i>';
+
+        }
+
+      );
+
+    }
+
+
+    attachToggle(
+      "password",
+      "togglePassword"
+    );
+
+
+    attachToggle(
+      "confirmPassword",
+      "toggleConfirmPassword"
+    );
+
+
+    // ======================================================
+    // 6. EMAIL REGISTRATION
+    // ======================================================
+
+    $("signupForm").addEventListener(
+      "submit",
+
+      async (event) => {
+
+        event.preventDefault();
+
+        clearNotice(signupNotice);
+
+
+        const displayName =
+          $("displayName").value.trim();
+
+
+        const email =
+          $("email").value.trim();
+
+
+        const password =
+          $("password").value;
+
+
+        const confirmPassword =
+          $("confirmPassword").value;
+
+
+        if (!$("acceptTerms").checked) {
+
+          notice(
+
+            signupNotice,
+
+            "Accept the Terms and Privacy Notice before continuing.",
+
+            "error"
+
+          );
+
+          return;
+
+        }
+
+
+        if (password !== confirmPassword) {
+
+          notice(
+
+            signupNotice,
+
+            "The password confirmation does not match.",
+
+            "error"
+
+          );
+
+          return;
+
+        }
+
+
+        try {
+
+          validatePassword(password);
+
+        } catch (error) {
+
+          notice(
+
+            signupNotice,
+
+            error.message,
+
+            "error"
+
+          );
+
+          return;
+
+        }
+
+
+        busy(
+
+          signupButton,
+
+          true,
+
+          "Creating account..."
+
+        );
+
+
+        try {
+
+          const result = await registerWithEmail({
+
+            displayName,
+
+            email,
+
+            password,
+
+            confirmPassword,
+
+            acceptedTerms: true
+
+          });
+
+
+          if (result.user?.emailVerified) {
+
+            return goToWorkspace();
+
+          }
+
+
+          let text;
+
+
+          if (result.verificationSent) {
+
+            text =
+
+              "Your BusinessOS account has been created. Firebase accepted the verification email request. Check your inbox and spam folder.";
+
+          } else {
+
+            text =
+
+              "Your account was created, but Firebase did not confirm that the verification email was sent. " +
+
+              (
+
+                result.verificationError?.message ||
+
+                "Use Resend Verification Email to try again."
+
+              );
+
+          }
+
+
+          if (result.profileSyncError) {
+
+            text +=
+
+              " Your account profile is still synchronising; contact support if this persists.";
+
+          }
+
+
+          showPending(
+            result.user,
+            text
+          );
+
+        } catch (error) {
+
+          notice(
+
+            signupNotice,
+
+            messageFor(error),
+
+            "error"
+
+          );
+
+        } finally {
+
+          busy(
+            signupButton,
+            false
+          );
+
+          updatePasswordUI();
+
+        }
+
+      }
+
+    );
+
+
+    // ======================================================
+    // 7. GOOGLE SIGN-IN
+    // ======================================================
+
+    $("googleButton").addEventListener(
+      "click",
+
+      async () => {
+
+        clearNotice(signupNotice);
+
+
+        if (!$("acceptTerms").checked) {
+
+          notice(
+
+            signupNotice,
+
+            "Accept the Terms and Privacy Notice before continuing with Google.",
+
+            "error"
+
+          );
+
+          return;
+
+        }
+
+
+        busy(
+
+          googleButton,
+
+          true,
+
+          "Connecting to Google..."
+
+        );
+
+
+        try {
+
+          const result =
+            await loginWithGoogle();
+
+
+          if (result.redirecting) {
+
+            return;
+
+          }
+
+
+          if (result.user) {
+
+            goToWorkspace();
+
+          }
+
+        } catch (error) {
+
+          notice(
+
+            signupNotice,
+
+            messageFor(error),
+
+            "error"
+
+          );
+
+          busy(
+            googleButton,
+            false
+          );
+
+        }
+
+      }
+
+    );
+
+
+    // ======================================================
+    // 8. EXISTING ACCOUNT VERIFICATION
+    // ======================================================
+
+    $("existingAccountForm").addEventListener(
+
+      "submit",
+
+      async (event) => {
+
+        event.preventDefault();
+
+        clearNotice(signupNotice);
+
+
+        busy(
+
+          existingButton,
+
+          true,
+
+          "Checking account..."
+
+        );
+
+
+        try {
+
+          const result = await loginWithEmail({
+
+            email:
+              $("existingEmail").value.trim(),
+
+            password:
+              $("existingPassword").value
+
+          });
+
+
+          if (result.emailVerified) {
+
+            return goToWorkspace();
+
+          }
+
+
+          showPending(
+
+            result.user,
+
+            "We found your existing account. Requesting its email verification link..."
+
+          );
+
+
+          const sent =
+            await sendEmailVerification(
+              result.user
+            );
+
+
+          if (sent.sent) {
+
+            notice(
+
+              pendingNotice,
+
+              "Firebase accepted your verification email request. Check your inbox and spam folder.",
+
+              "success"
+
+            );
+
+          } else if (sent.cooldown) {
+
+            notice(
+
+              pendingNotice,
+
+              `Please wait ${sent.secondsRemaining} seconds before requesting another verification email.`,
+
+              "info"
+
+            );
+
+          } else if (sent.alreadyVerified) {
+
+            goToWorkspace();
+
+          }
+
+        } catch (error) {
+
+          notice(
+
+            signupNotice,
+
+            messageFor(error),
+
+            "error"
+
+          );
+
+        } finally {
+
+          busy(
+            existingButton,
+            false
+          );
+
+        }
+
+      }
+
+    );
+
+
+    // ======================================================
+    // 9. RESEND VERIFICATION EMAIL
+    // ======================================================
+
+    $("resendButton").addEventListener(
+      "click",
+
+      async () => {
+
+        const user =
+          pendingUser || getCurrentUser();
+
+
+        if (!user) {
+
+          notice(
+
+            pendingNotice,
+
+            "Sign in to the account that needs verification first.",
+
+            "error"
+
+          );
+
+          return;
+
+        }
+
+
+        busy(
+
+          $("resendButton"),
+
+          true,
+
+          "Sending verification..."
+
+        );
+
+
+        try {
+
+          const result =
+            await sendEmailVerification(user);
+
+
+          if (result.sent) {
+
+            notice(
+
+              pendingNotice,
+
+              "Firebase accepted the verification email request. Check your inbox and spam folder.",
+
+              "success"
+
+            );
+
+          } else if (result.alreadyVerified) {
+
+            goToWorkspace();
+
+          } else if (result.cooldown) {
+
+            notice(
+
+              pendingNotice,
+
+              `Please wait ${result.secondsRemaining} seconds before trying again.`,
+
+              "info"
+
+            );
+
+          }
+
+        } catch (error) {
+
+          notice(
+
+            pendingNotice,
+
+            messageFor(error),
+
+            "error"
+
+          );
+
+        } finally {
+
+          busy(
+            $("resendButton"),
+            false
+          );
+
+        }
+
+      }
+
+    );
+
+
+    // ======================================================
+    // 10. CHECK EMAIL VERIFICATION STATUS
+    // ======================================================
+
+    $("checkButton").addEventListener(
+      "click",
+
+      async () => {
+
+        busy(
+
+          $("checkButton"),
+
+          true,
+
+          "Checking Firebase..."
+
+        );
+
+
+        try {
+
+          const result =
+            await refreshEmailVerification();
+
+
+          if (result.emailVerified) {
+
+            notice(
+
+              pendingNotice,
+
+              "Email verified. Opening your BusinessOS workspace...",
+
+              "success"
+
+            );
+
+
+            goToWorkspace();
+
+          } else {
+
+            notice(
+
+              pendingNotice,
+
+              "Firebase has not confirmed the email yet. Open the link in your email, then try again.",
+
+              "info"
+
+            );
+
+          }
+
+        } catch (error) {
+
+          notice(
+
+            pendingNotice,
+
+            messageFor(error),
+
+            "error"
+
+          );
+
+        } finally {
+
+          busy(
+            $("checkButton"),
+            false
+          );
+
+        }
+
+      }
+
+    );
+
+
+    // ======================================================
+    // 11. SWITCH ACCOUNT
+    // ======================================================
+
+    $("switchAccountButton").addEventListener(
+      "click",
+
+      async () => {
+
+        try {
+
+          await logoutUser();
+
+
+          pendingCard.hidden = true;
+
+          signupCard.hidden = false;
+
+          pendingUser = null;
+
+
+          notice(
+
+            signupNotice,
+
+            "You have signed out. You can now use another account.",
+
+            "success"
+
+          );
+
+        } catch (error) {
+
+          notice(
+
+            pendingNotice,
+
+            messageFor(error),
+
+            "error"
+
+          );
+
+        }
+
+      }
+
+    );
+
+
+    // ======================================================
+    // 12. INITIALIZE SIGNUP PAGE
+    // ======================================================
+
+    async function initializeSignup() {
+
+      try {
+
+        await firebaseReady;
+
+
+        captureAttributionFromURL();
+
+
+        const user =
+          await waitForInitialAuthState();
+
+
+        if (user) {
+
+          if (
+
+            isEmailPasswordUser(user) &&
+
+            !user.emailVerified
+
+          ) {
+
+            showPending(
+
+              user,
+
+              "You are signed in, but your email address still needs verification."
+
+            );
+
+          } else {
+
+            goToWorkspace();
+
+          }
+
+        }
+
+      } catch (error) {
+
+        notice(
+
+          signupNotice,
+
+          messageFor(error),
+
+          "error"
+
+        );
+
+      }
+
+    }
+
+
+    initializeSignup();
+
+  </script>
+
+</body>
+</html>

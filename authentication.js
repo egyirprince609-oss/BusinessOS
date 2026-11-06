@@ -1,39 +1,40 @@
 
-/* ============================================================
-   BUSINESSOS — CENTRAL AUTHENTICATION & IDENTITY SERVICE
-   Firebase Project: business-os-by
+/*
+ * BUSINESSOS - CENTRAL AUTHENTICATION AND IDENTITY SERVICE
+ * Firebase Project: business-os-by
+ * Firebase SDK: 13.2.0
+ *
+ * Responsibilities:
+ * - Firebase initialization and persistence
+ * - Email/password registration and login
+ * - Google authentication
+ * - Email verification and verification-link handling
+ * - Password recovery and password changes
+ * - Firebase UID identity and special display ID
+ * - User profile creation and synchronization
+ * - Profile photo URL management
+ * - Referral and invitation attribution
+ * - Business registration and membership
+ * - Business role checks
+ * - Phone verification integration point
+ * - Authentication guards and splash routing
+ *
+ * SECURITY:
+ * - Firebase UID is the permanent account identity.
+ * - Business IDs are separate from personal user IDs.
+ * - Privileged operations require trusted backend validation.
+ * - Never place SMTP passwords, service-account keys,
+ *   SMS credentials or social API secrets in this file.
+ */
 
-   Responsibilities:
-   - Firebase initialization
-   - Email/password registration and login
-   - Google authentication
-   - Email verification
-   - Password recovery and reset
-   - Persistent authentication state
-   - User profile creation and synchronization
-   - Firebase UID identity
-   - Referral and invitation attribution
-   - Business registration and membership
-   - Business role checks
-   - Phone verification integration point
-   - Authentication guards
-   - Splash-screen routing
 
-   IMPORTANT:
-   Privileged operations, OTP generation, referral rewards,
-   role elevation and administrative permissions require a
-   trusted backend and Firestore Security Rules.
-============================================================ */
-
-
-/* ============================================================
-   1. FIREBASE SDK IMPORTS
-============================================================ */
+// ============================================================
+// 1. FIREBASE SDK IMPORTS
+// ============================================================
 
 import {
     initializeApp,
-    getApps,
-    getApp
+    getApps
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 
 
@@ -49,12 +50,14 @@ import {
     signInWithRedirect,
     getRedirectResult,
     signOut,
-    sendEmailVerification,
+    sendEmailVerification as firebaseSendEmailVerification,
     sendPasswordResetEmail,
     confirmPasswordReset,
+    checkActionCode,
+    applyActionCode,
     updateProfile as firebaseUpdateProfile,
-    updateEmail,
-    updatePassword,
+    updateEmail as firebaseUpdateEmail,
+    updatePassword as firebaseUpdatePassword,
     EmailAuthProvider,
     reauthenticateWithCredential,
     reload,
@@ -75,11 +78,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 
-/* ============================================================
-   2. FIREBASE PROJECT CONFIGURATION
-============================================================ */
+// ============================================================
+// 2. FIREBASE PROJECT CONFIGURATION
+// ============================================================
 
-const firebaseConfig = {
+const firebaseConfig = Object.freeze({
 
     apiKey: "AIzaSyCaItsHbMSCA-jKJ5IldpRD0NEW_M9eJ68",
 
@@ -95,34 +98,180 @@ const firebaseConfig = {
 
     measurementId: "G-KBGYD6D73L"
 
-};
+});
 
 
-/* ============================================================
-   3. INITIALIZE FIREBASE
-============================================================ */
+// ============================================================
+// 3. BUSINESSOS ROUTES
+// ============================================================
+
+export const BUSINESSOS_ROUTES = Object.freeze({
+
+    index: "index.html",
+
+    signup: "signup.html",
+
+    login: "login.html",
+
+    verification: "verify-email.html",
+
+    passwordRecovery: "forgot.html",
+
+    workspace: "menu.html",
+
+    profileSetup: "profile-setup.html",
+
+    businessSetup: "business-setup.html"
+
+});
+
+
+// ============================================================
+// 4. BUSINESSOS COLLECTION REGISTRY
+// ============================================================
+
+/*
+ * These names establish the central collection registry.
+ *
+ * Actual product records belong in their respective
+ * Firestore collections, not inside the personal auth profile.
+ */
+
+export const BUSINESSOS_COLLECTIONS = Object.freeze({
+
+    users: "users",
+
+    businesses: "businesses",
+
+    businessSearch: "businessSearch",
+
+    publicProfiles: "publicProfiles",
+
+    chatRequests: "chatRequests",
+
+    conversations: "conversations",
+
+    campaigns: "campaigns",
+
+    mediaAssets: "mediaAssets",
+
+    socialConnections: "socialConnections",
+
+    publishJobs: "publishJobs",
+
+    notifications: "notifications",
+
+    auditLogs: "auditLogs",
+
+    groups: "groups",
+
+    products: "products",
+
+    services: "services",
+
+    orders: "orders",
+
+    payments: "payments",
+
+    inventoryItems: "inventoryItems",
+
+    suppliers: "suppliers",
+
+    purchaseOrders: "purchaseOrders",
+
+    branches: "branches",
+
+    employees: "employees",
+
+    attendanceEvents: "attendanceEvents",
+
+    leaveRequests: "leaveRequests",
+
+    tasks: "tasks",
+
+    projects: "projects",
+
+    productionOrders: "productionOrders",
+
+    machines: "machines",
+
+    qualityInspections: "qualityInspections",
+
+    aiRequests: "aiRequests",
+
+    subscriptions: "subscriptions",
+
+    reports: "reports",
+
+    reportsQueue: "reportsQueue",
+
+    moderationQueue: "moderationQueue"
+
+});
+
+
+// ============================================================
+// 5. GENERAL CONSTANTS
+// ============================================================
+
+const STORAGE_KEYS = Object.freeze({
+
+    returningUser: "businessos:returningUser",
+
+    signupAttribution: "businessos:signupAttribution",
+
+    verificationLastSent: "businessos:verificationLastSent"
+
+});
+
+
+const FIREBASE_SDK_VERSION = "13.2.0";
+
+const VERIFICATION_RESEND_SECONDS = 60;
+
+
+// ============================================================
+// 6. INITIALIZE FIREBASE
+// ============================================================
 
 export const app = getApps().length
-    ? getApp()
+    ? getApps()[0]
     : initializeApp(firebaseConfig);
 
 
 export const auth = getAuth(app);
 
+
 export const db = getFirestore(app);
 
 
-/* ============================================================
-   4. AUTHENTICATION PERSISTENCE
-============================================================ */
+export const googleProvider = new GoogleAuthProvider();
+
+
+googleProvider.setCustomParameters({
+
+    prompt: "select_account"
+
+});
+
+
+auth.languageCode = "en";
+
+
+// ============================================================
+// 7. AUTHENTICATION PERSISTENCE
+// ============================================================
 
 export const persistenceReady = setPersistence(
+
     auth,
+
     browserLocalPersistence
+
 ).catch((error) => {
 
     console.warn(
-        "Session persistence could not be configured:",
+        "BusinessOS could not enable local authentication persistence:",
         error
     );
 
@@ -131,45 +280,43 @@ export const persistenceReady = setPersistence(
 });
 
 
-/* ============================================================
-   5. GOOGLE AUTHENTICATION PROVIDER
-============================================================ */
+export const firebaseReady = persistenceReady.then(() => ({
 
-export const googleProvider = new GoogleAuthProvider();
+    app,
 
-googleProvider.setCustomParameters({
-    prompt: "select_account"
-});
+    auth,
 
+    db
 
-/* ============================================================
-   6. GENERAL CONSTANTS
-============================================================ */
-
-const RETURNING_USER_KEY = "businessos:returningUser";
-
-const ATTRIBUTION_KEY = "businessos:signupAttribution";
-
-const VERIFICATION_PAGE = "verify-email.html";
-
-const LOGIN_PAGE = "login.html";
-
-const SIGNUP_PAGE = "signup.html";
-
-const WORKSPACE_PAGE = "menu.html";
+}));
 
 
-/* ============================================================
-   7. SAFE STORAGE HELPERS
-============================================================ */
+async function requireFirebase() {
+
+    await firebaseReady;
+
+    if (!auth || !db) {
+
+        throw new Error(
+            "BusinessOS account services are not available."
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// 8. SAFE STORAGE HELPERS
+// ============================================================
 
 function readStorage(key) {
 
     try {
 
-        return localStorage.getItem(key);
+        return window.localStorage.getItem(key);
 
-    } catch (error) {
+    } catch {
 
         return null;
 
@@ -182,11 +329,14 @@ function writeStorage(key, value) {
 
     try {
 
-        localStorage.setItem(key, value);
+        window.localStorage.setItem(
+            key,
+            String(value)
+        );
 
         return true;
 
-    } catch (error) {
+    } catch {
 
         return false;
 
@@ -199,236 +349,314 @@ function removeStorage(key) {
 
     try {
 
-        localStorage.removeItem(key);
+        window.localStorage.removeItem(key);
 
-    } catch (error) {
+    } catch {
 
         // Storage may be unavailable.
-    }
-
-}
-
-
-/* ============================================================
-   8. GENERAL VALIDATION
-============================================================ */
-
-function cleanText(value, maximumLength = 150) {
-
-    if (typeof value !== "string") {
-
-        return "";
 
     }
 
-    return value.trim().slice(0, maximumLength);
-
 }
 
 
-function normalizeEmail(email) {
+function markReturningUser() {
 
-    return cleanText(email, 254).toLowerCase();
-
-}
-
-
-function validEmail(email) {
-
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-}
-
-
-function validPassword(password) {
-
-    return (
-        typeof password === "string" &&
-        password.length >= 8
+    writeStorage(
+        STORAGE_KEYS.returningUser,
+        "true"
     );
 
 }
 
 
-function cleanCode(value) {
+// ============================================================
+// 9. GENERAL VALIDATION
+// ============================================================
 
-    if (typeof value !== "string") {
+function cleanText(value, maxLength = 150) {
 
-        return "";
+    return typeof value === "string"
 
-    }
+        ? value.trim().replace(/\s+/g, " ").slice(0, maxLength)
 
-    const code = value.trim();
-
-    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(code)) {
-
-        return "";
-
-    }
-
-    return code;
+        : "";
 
 }
 
 
-/* ============================================================
-   9. USER-FRIENDLY ERROR HANDLING
-============================================================ */
+export function normalizeEmail(value) {
 
-const AUTH_ERRORS = {
+    return cleanText(value, 254).toLowerCase();
 
-    "auth/email-already-in-use":
-        "An account already exists with this email address.",
+}
 
-    "auth/invalid-email":
-        "Please enter a valid email address.",
 
-    "auth/weak-password":
-        "Please choose a stronger password.",
+export function isValidEmail(value) {
 
-    "auth/user-not-found":
-        "No account was found with those details.",
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
+        normalizeEmail(value)
+    );
 
-    "auth/wrong-password":
-        "The email address or password is incorrect.",
+}
 
-    "auth/invalid-credential":
-        "The sign-in details are incorrect. Please try again.",
 
-    "auth/too-many-requests":
-        "Too many attempts. Please wait and try again.",
+// ============================================================
+// 10. PASSWORD POLICY
+// ============================================================
 
-    "auth/network-request-failed":
-        "A network connection is required. Please check your connection.",
+export function getPasswordChecks(password) {
 
-    "auth/popup-blocked":
-        "The Google sign-in window was blocked.",
+    const value =
+        typeof password === "string" ? password : "";
 
-    "auth/popup-closed-by-user":
-        "Google sign-in was cancelled.",
+    return Object.freeze({
 
-    "auth/account-exists-with-different-credential":
-        "An account already exists with another sign-in method.",
+        length:
+            value.length >= 6 &&
+            value.length <= 400,
 
-    "auth/requires-recent-login":
-        "Please sign in again before making this change.",
+        uppercase:
+            /[A-Z]/.test(value),
 
-    "auth/operation-not-allowed":
-        "This sign-in method is not currently available.",
+        lowercase:
+            /[a-z]/.test(value),
 
-    "permission-denied":
-        "You do not have permission to perform this action.",
+        special:
+            /[^A-Za-z0-9\s]/.test(value)
 
-    "unavailable":
-        "The service is temporarily unavailable. Please try again."
+    });
 
-};
+}
 
+
+export function validatePassword(password) {
+
+    const checks = getPasswordChecks(password);
+
+
+    if (!checks.length) {
+
+        throw new Error(
+            "Your password must contain between 6 and 400 characters."
+        );
+
+    }
+
+
+    if (!checks.uppercase) {
+
+        throw new Error(
+            "Your password must contain at least one uppercase letter."
+        );
+
+    }
+
+
+    if (!checks.lowercase) {
+
+        throw new Error(
+            "Your password must contain at least one lowercase letter."
+        );
+
+    }
+
+
+    if (!checks.special) {
+
+        throw new Error(
+            "Your password must contain at least one special character."
+        );
+
+    }
+
+
+    return true;
+
+}
+
+
+// ============================================================
+// 11. SAFE REFERRAL CODE VALIDATION
+// ============================================================
+
+function cleanCode(value, maxLength = 80) {
+
+    const code = cleanText(value, maxLength);
+
+    return /^[A-Za-z0-9_-]{1,80}$/.test(code)
+        ? code
+        : "";
+
+}
+
+
+// ============================================================
+// 12. CENTRAL ERROR HANDLING
+// ============================================================
 
 export function getFriendlyError(error) {
 
-    if (!error) {
+    const code = String(error?.code || "");
 
-        return "Something went wrong. Please try again.";
+    const messages = {
 
-    }
+        "auth/email-already-in-use":
+            "An account already exists with this email address. Sign in instead.",
 
-    if (AUTH_ERRORS[error.code]) {
+        "auth/invalid-email":
+            "Please enter a valid email address.",
 
-        return AUTH_ERRORS[error.code];
+        "auth/weak-password":
+            "Please choose a stronger password.",
 
-    }
+        "auth/user-not-found":
+            "The email address or password is incorrect.",
 
-    return (
-        error.message ||
+        "auth/wrong-password":
+            "The email address or password is incorrect.",
+
+        "auth/invalid-credential":
+            "The email address or password is incorrect.",
+
+        "auth/too-many-requests":
+            "Too many attempts. Please wait before trying again.",
+
+        "auth/network-request-failed":
+            "A network connection is required. Check your connection and try again.",
+
+        "auth/popup-blocked":
+            "The Google sign-in window was blocked.",
+
+        "auth/popup-closed-by-user":
+            "Google sign-in was cancelled.",
+
+        "auth/cancelled-popup-request":
+            "A Google sign-in request is already running.",
+
+        "auth/account-exists-with-different-credential":
+            "An account already exists with another sign-in method.",
+
+        "auth/unauthorized-domain":
+            "This website domain is not authorised in Firebase Authentication settings.",
+
+        "auth/operation-not-allowed":
+            "This sign-in method is not enabled in Firebase Authentication.",
+
+        "auth/expired-action-code":
+            "This verification link has expired. Request a new verification email.",
+
+        "auth/invalid-action-code":
+            "This verification link is invalid or has already been used.",
+
+        "auth/requires-recent-login":
+            "Please sign in again before making this security-sensitive change.",
+
+        "permission-denied":
+            "Firestore denied this operation. Check your deployed Firestore Rules and profile schema.",
+
+        "unavailable":
+            "The service is temporarily unavailable. Please try again."
+
+    };
+
+
+    const friendly = new Error(
+
+        messages[code] ||
+
+        error?.message ||
+
         "Something went wrong. Please try again."
+
     );
+
+
+    friendly.code =
+        code || "businessos/unknown-error";
+
+
+    friendly.cause = error;
+
+
+    return friendly;
 
 }
 
 
-/* ============================================================
-   10. REFERRAL AND INVITATION ATTRIBUTION
-============================================================ */
-
-/*
-    Supported URL examples:
-
-    signup.html?ref=REFERRAL_CODE
-
-    signup.html?invite=INVITATION_CODE
-
-    signup.html?business=BUSINESS_ID
-
-    signup.html?ref=ABC123&invite=JOIN456
-*/
-
+// ============================================================
+// 13. REFERRAL AND INVITATION ATTRIBUTION
+// ============================================================
 
 export function captureAttributionFromURL() {
 
-    try {
-
-        const params = new URLSearchParams(
-            window.location.search
-        );
-
-        const current = getPendingAttribution() || {};
-
-        const referralCode = cleanCode(
-            params.get("ref")
-        );
-
-        const invitationCode = cleanCode(
-            params.get("invite")
-        );
-
-        const businessId = cleanCode(
-            params.get("business")
-        );
-
-        const attribution = {
-
-            referralCode:
-                referralCode || current.referralCode || null,
-
-            invitationCode:
-                invitationCode || current.invitationCode || null,
-
-            businessId:
-                businessId || current.businessId || null,
-
-            capturedAt: current.capturedAt || Date.now()
-
-        };
-
-
-        if (
-            attribution.referralCode ||
-            attribution.invitationCode ||
-            attribution.businessId
-        ) {
-
-            writeStorage(
-                ATTRIBUTION_KEY,
-                JSON.stringify(attribution)
-            );
-
-        }
-
-        return attribution;
-
-    } catch (error) {
+    if (typeof window === "undefined") {
 
         return null;
 
     }
+
+
+    const params = new URLSearchParams(
+        window.location.search
+    );
+
+
+    const previous = getPendingAttribution() || {};
+
+
+    const attribution = {
+
+        referralCode:
+            cleanCode(params.get("ref")) ||
+            previous.referralCode ||
+            null,
+
+        invitationCode:
+            cleanCode(params.get("invite")) ||
+            previous.invitationCode ||
+            null,
+
+        businessId:
+            cleanCode(params.get("business")) ||
+            previous.businessId ||
+            null
+
+    };
+
+
+    if (
+
+        attribution.referralCode ||
+
+        attribution.invitationCode ||
+
+        attribution.businessId
+
+    ) {
+
+        writeStorage(
+
+            STORAGE_KEYS.signupAttribution,
+
+            JSON.stringify(attribution)
+
+        );
+
+    }
+
+
+    return attribution;
 
 }
 
 
 export function getPendingAttribution() {
 
-    const stored = readStorage(ATTRIBUTION_KEY);
+    const stored = readStorage(
+        STORAGE_KEYS.signupAttribution
+    );
+
 
     if (!stored) {
 
@@ -436,11 +664,30 @@ export function getPendingAttribution() {
 
     }
 
+
     try {
 
-        return JSON.parse(stored);
+        const item = JSON.parse(stored);
 
-    } catch (error) {
+
+        return {
+
+            referralCode:
+                cleanCode(item?.referralCode) || null,
+
+            invitationCode:
+                cleanCode(item?.invitationCode) || null,
+
+            businessId:
+                cleanCode(item?.businessId) || null
+
+        };
+
+    } catch {
+
+        removeStorage(
+            STORAGE_KEYS.signupAttribution
+        );
 
         return null;
 
@@ -451,986 +698,20 @@ export function getPendingAttribution() {
 
 export function clearPendingAttribution() {
 
-    removeStorage(ATTRIBUTION_KEY);
-
-}
-
-
-captureAttributionFromURL();
-
-
-/* ============================================================
-   11. USER PROFILE CREATION
-============================================================ */
-
-/*
-    Main account identity:
-
-    users/{firebaseUID}
-
-    A Firebase UID identifies one person.
-
-    It is not a business ID, phone number or referral ID.
-*/
-
-
-export async function ensureUserProfile(
-    user = auth.currentUser
-) {
-
-    if (!user) {
-
-        throw new Error("Please sign in first.");
-
-    }
-
-    const userRef = doc(
-        db,
-        "users",
-        user.uid
-    );
-
-
-    const providerIds = (user.providerData || []).map(
-        provider => provider.providerId
-    );
-
-
-    const safeProfile = {
-
-        uid: user.uid,
-
-        email: user.email || null,
-
-        displayName: user.displayName || "",
-
-        photoURL: user.photoURL || null,
-
-        emailVerified: Boolean(user.emailVerified),
-
-        providerIds,
-
-        updatedAt: serverTimestamp()
-
-    };
-
-
-    await runTransaction(db, async (transaction) => {
-
-        const snapshot = await transaction.get(userRef);
-
-
-        if (!snapshot.exists()) {
-
-            transaction.set(userRef, {
-
-                ...safeProfile,
-
-                accountStatus: "active",
-
-                onboardingStatus: "needs_profile",
-
-                preferredLanguage: "en",
-
-                country: null,
-
-                createdAt: serverTimestamp()
-
-            });
-
-        } else {
-
-            transaction.set(
-                userRef,
-                safeProfile,
-                { merge: true }
-            );
-
-        }
-
-    });
-
-
-    return userRef;
-
-}
-
-
-/* ============================================================
-   12. CREATE PROFILE AFTER REGISTRATION
-============================================================ */
-
-export async function createUserProfile(
-    user,
-    options = {}
-) {
-
-    if (!user) {
-
-        throw new Error("A valid account is required.");
-
-    }
-
-    const userRef = doc(
-        db,
-        "users",
-        user.uid
-    );
-
-
-    const attribution =
-        options.attribution ||
-        getPendingAttribution() ||
-        {};
-
-
-    const providerIds = (user.providerData || []).map(
-        provider => provider.providerId
-    );
-
-
-    const profileData = {
-
-        uid: user.uid,
-
-        email: user.email || null,
-
-        displayName: user.displayName || "",
-
-        photoURL: user.photoURL || null,
-
-        emailVerified: Boolean(user.emailVerified),
-
-        providerIds,
-
-        accountStatus: "active",
-
-        onboardingStatus: "needs_profile",
-
-        preferredLanguage: "en",
-
-        country: null,
-
-        signupAttribution: {
-
-            referralCode:
-                cleanCode(attribution.referralCode) || null,
-
-            invitationCode:
-                cleanCode(attribution.invitationCode) || null,
-
-            businessId:
-                cleanCode(attribution.businessId) || null
-
-        },
-
-        termsAccepted: options.acceptedTerms === true,
-
-        createdAt: serverTimestamp(),
-
-        updatedAt: serverTimestamp()
-
-    };
-
-
-    await runTransaction(db, async (transaction) => {
-
-        const snapshot = await transaction.get(userRef);
-
-
-        if (!snapshot.exists()) {
-
-            transaction.set(userRef, profileData);
-
-        } else {
-
-            transaction.set(
-                userRef,
-                {
-                    email: user.email || null,
-                    displayName: user.displayName || "",
-                    photoURL: user.photoURL || null,
-                    emailVerified: Boolean(user.emailVerified),
-                    providerIds,
-                    updatedAt: serverTimestamp()
-                },
-                { merge: true }
-            );
-
-        }
-
-    });
-
-
-    return userRef;
-
-}
-
-
-/* ============================================================
-   13. EMAIL VERIFICATION SETTINGS
-============================================================ */
-
-function getVerificationSettings() {
-
-    return {
-
-        url: new URL(
-            LOGIN_PAGE + "?emailVerified=1",
-            window.location.origin
-        ).toString(),
-
-        handleCodeInApp: false
-
-    };
-
-}
-
-
-/* ============================================================
-   14. EMAIL REGISTRATION
-============================================================ */
-
-export async function registerWithEmail({
-    displayName,
-    email,
-    password,
-    confirmPassword,
-    acceptedTerms
-} = {}) {
-
-    await persistenceReady;
-
-
-    const name = cleanText(displayName, 80);
-
-    const normalizedEmail = normalizeEmail(email);
-
-
-    if (!name) {
-
-        throw new Error("Please enter your name.");
-
-    }
-
-
-    if (!validEmail(normalizedEmail)) {
-
-        throw new Error("Please enter a valid email address.");
-
-    }
-
-
-    if (!validPassword(password)) {
-
-        throw new Error(
-            "Your password must contain at least 8 characters."
-        );
-
-    }
-
-
-    if (
-        confirmPassword !== undefined &&
-        password !== confirmPassword
-    ) {
-
-        throw new Error("Your passwords do not match.");
-
-    }
-
-
-    if (acceptedTerms !== true) {
-
-        throw new Error(
-            "Please accept the Terms and Privacy Notice to continue."
-        );
-
-    }
-
-
-    try {
-
-        const credential =
-            await createUserWithEmailAndPassword(
-                auth,
-                normalizedEmail,
-                password
-            );
-
-
-        const user = credential.user;
-
-
-        await firebaseUpdateProfile(user, {
-
-            displayName: name
-
-        });
-
-
-        await createUserProfile(user, {
-
-            acceptedTerms: true
-
-        });
-
-
-        writeStorage(
-            RETURNING_USER_KEY,
-            "true"
-        );
-
-
-        const verificationResult = {
-
-            user,
-
-            verificationSent: false,
-
-            needsEmailVerification: true
-
-        };
-
-
-        try {
-
-            await sendEmailVerification(
-                user,
-                getVerificationSettings()
-            );
-
-            verificationResult.verificationSent = true;
-
-            clearPendingAttribution();
-
-        } catch (verificationError) {
-
-            verificationResult.verificationError =
-                getFriendlyError(verificationError);
-
-        }
-
-
-        return verificationResult;
-
-    } catch (error) {
-
-        throw new Error(
-            getFriendlyError(error)
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   15. EMAIL/PASSWORD LOGIN
-============================================================ */
-
-export async function loginWithEmail({
-    email,
-    password
-} = {}) {
-
-    await persistenceReady;
-
-
-    const normalizedEmail = normalizeEmail(email);
-
-
-    if (!validEmail(normalizedEmail)) {
-
-        throw new Error("Please enter a valid email address.");
-
-    }
-
-
-    if (!password) {
-
-        throw new Error("Please enter your password.");
-
-    }
-
-
-    try {
-
-        const credential =
-            await signInWithEmailAndPassword(
-                auth,
-                normalizedEmail,
-                password
-            );
-
-
-        await ensureUserProfile(credential.user);
-
-
-        writeStorage(
-            RETURNING_USER_KEY,
-            "true"
-        );
-
-
-        return {
-
-            user: credential.user,
-
-            needsEmailVerification:
-                !credential.user.emailVerified &&
-                isEmailPasswordUser(credential.user)
-
-        };
-
-    } catch (error) {
-
-        throw new Error(
-            getFriendlyError(error)
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   16. GOOGLE SIGN-IN
-============================================================ */
-
-/*
-    Browser:
-
-    1. Try Firebase popup.
-    2. If a popup is blocked, try the configured native adapter.
-    3. If native authentication is unavailable, use redirect.
-
-    Android APK:
-
-    A real native Google account chooser requires a configured
-    Capacitor Firebase Authentication plugin. The optional
-    adapter below is its integration point.
-
-    The adapter must complete Firebase authentication and
-    return a signed-in Firebase user credential.
-*/
-
-
-function isPopupFailure(error) {
-
-    return [
-
-        "auth/popup-blocked",
-
-        "auth/operation-not-supported-in-this-environment",
-
-        "auth/unsupported-persistence-type"
-
-    ].includes(error?.code);
-
-}
-
-
-async function tryNativeGoogleSignIn() {
-
-    const nativeSignIn =
-        window.BusinessOSNativeGoogleSignIn;
-
-
-    if (typeof nativeSignIn !== "function") {
-
-        return null;
-
-    }
-
-
-    await nativeSignIn();
-
-
-    const user = auth.currentUser;
-
-
-    if (!user) {
-
-        throw new Error(
-            "Google authentication did not complete."
-        );
-
-    }
-
-
-    await ensureUserProfile(user);
-
-
-    writeStorage(
-        RETURNING_USER_KEY,
-        "true"
-    );
-
-
-    return {
-
-        user,
-
-        native: true,
-
-        redirecting: false
-
-    };
-
-}
-
-
-export async function loginWithGoogle() {
-
-    await persistenceReady;
-
-
-    try {
-
-        const credential =
-            await signInWithPopup(
-                auth,
-                googleProvider
-            );
-
-
-        await ensureUserProfile(credential.user);
-
-
-        writeStorage(
-            RETURNING_USER_KEY,
-            "true"
-        );
-
-
-        return {
-
-            user: credential.user,
-
-            native: false,
-
-            redirecting: false
-
-        };
-
-    } catch (error) {
-
-        if (
-            error?.code === "auth/popup-closed-by-user"
-        ) {
-
-            throw new Error(
-                "Google sign-in was cancelled."
-            );
-
-        }
-
-
-        if (!isPopupFailure(error)) {
-
-            throw new Error(
-                getFriendlyError(error)
-            );
-
-        }
-
-
-        const isNative =
-            Boolean(
-                window.Capacitor?.isNativePlatform?.()
-            );
-
-
-        if (isNative) {
-
-            try {
-
-                const result =
-                    await tryNativeGoogleSignIn();
-
-
-                if (result) {
-
-                    return result;
-
-                }
-
-            } catch (nativeError) {
-
-                throw new Error(
-                    getFriendlyError(nativeError)
-                );
-
-            }
-
-        }
-
-
-        try {
-
-            await signInWithRedirect(
-                auth,
-                googleProvider
-            );
-
-
-            return {
-
-                user: null,
-
-                native: false,
-
-                redirecting: true
-
-            };
-
-        } catch (redirectError) {
-
-            throw new Error(
-                getFriendlyError(redirectError)
-            );
-
-        }
-
-    }
-
-}
-
-
-/* ============================================================
-   17. COMPLETE GOOGLE REDIRECT RESULT
-============================================================ */
-
-export async function completeGoogleRedirect() {
-
-    await persistenceReady;
-
-
-    try {
-
-        const result = await getRedirectResult(auth);
-
-
-        if (!result || !result.user) {
-
-            return null;
-
-        }
-
-
-        await ensureUserProfile(result.user);
-
-
-        writeStorage(
-            RETURNING_USER_KEY,
-            "true"
-        );
-
-
-        return result.user;
-
-    } catch (error) {
-
-        throw new Error(
-            getFriendlyError(error)
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   18. FORGOT PASSWORD
-============================================================ */
-
-export async function sendPasswordRecoveryEmail(email) {
-
-    await persistenceReady;
-
-
-    const normalizedEmail = normalizeEmail(email);
-
-
-    if (!validEmail(normalizedEmail)) {
-
-        throw new Error("Please enter a valid email address.");
-
-    }
-
-
-    try {
-
-        await sendPasswordResetEmail(
-            auth,
-            normalizedEmail,
-            {
-
-                url: new URL(
-                    LOGIN_PAGE,
-                    window.location.origin
-                ).toString(),
-
-                handleCodeInApp: false
-
-            }
-        );
-
-
-        return {
-
-            success: true,
-
-            message:
-                "If an account exists for this address, a password recovery link will be sent."
-
-        };
-
-    } catch (error) {
-
-        /*
-            Do not disclose whether an email has an account.
-        */
-
-        if ([
-
-            "auth/user-not-found",
-
-            "auth/invalid-email"
-
-        ].includes(error.code)) {
-
-            return {
-
-                success: true,
-
-                message:
-                    "If an account exists for this address, a password recovery link will be sent."
-
-            };
-
-        }
-
-
-        throw new Error(
-            getFriendlyError(error)
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   19. COMPLETE PASSWORD RESET
-============================================================ */
-
-export async function resetPassword({
-    actionCode,
-    newPassword,
-    confirmPassword
-} = {}) {
-
-    if (!actionCode) {
-
-        throw new Error(
-            "The password recovery link is invalid or incomplete."
-        );
-
-    }
-
-
-    if (!validPassword(newPassword)) {
-
-        throw new Error(
-            "Your new password must contain at least 8 characters."
-        );
-
-    }
-
-
-    if (newPassword !== confirmPassword) {
-
-        throw new Error(
-            "Your passwords do not match."
-        );
-
-    }
-
-
-    try {
-
-        await confirmPasswordReset(
-            auth,
-            actionCode,
-            newPassword
-        );
-
-
-        return {
-
-            success: true,
-
-            message: "Your password has been updated."
-
-        };
-
-    } catch (error) {
-
-        throw new Error(
-            getFriendlyError(error)
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   20. RESEND EMAIL VERIFICATION
-============================================================ */
-
-export async function resendEmailVerification() {
-
-    const user = auth.currentUser;
-
-
-    if (!user) {
-
-        throw new Error(
-            "Please sign in to verify your email address."
-        );
-
-    }
-
-
-    if (user.emailVerified) {
-
-        return {
-
-            success: true,
-
-            message: "Your email address is already verified."
-
-        };
-
-    }
-
-
-    try {
-
-        await sendEmailVerification(
-            user,
-            getVerificationSettings()
-        );
-
-
-        return {
-
-            success: true,
-
-            message: "A new verification link has been sent."
-
-        };
-
-    } catch (error) {
-
-        throw new Error(
-            getFriendlyError(error)
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   21. REFRESH EMAIL VERIFICATION STATUS
-============================================================ */
-
-export async function refreshEmailVerification() {
-
-    const user = auth.currentUser;
-
-
-    if (!user) {
-
-        throw new Error("Please sign in first.");
-
-    }
-
-
-    await reload(user);
-
-
-    if (user.emailVerified) {
-
-        await ensureUserProfile(user);
-
-    }
-
-
-    return {
-
-        verified: Boolean(user.emailVerified),
-
-        user
-
-    };
-
-}
-
-
-/* ============================================================
-   22. CHECK ACCOUNT PROVIDER
-============================================================ */
-
-export function isEmailPasswordUser(user = auth.currentUser) {
-
-    if (!user) {
-
-        return false;
-
-    }
-
-
-    return (user.providerData || []).some(
-
-        provider =>
-            provider.providerId === "password"
-
+    removeStorage(
+        STORAGE_KEYS.signupAttribution
     );
 
 }
 
 
-export function isGoogleUser(user = auth.currentUser) {
-
-    if (!user) {
-
-        return false;
-
-    }
-
-
-    return (user.providerData || []).some(
-
-        provider =>
-            provider.providerId === "google.com"
-
-    );
-
-}
-
-
-/* ============================================================
-   23. CURRENT USER INFORMATION
-============================================================ */
+// ============================================================
+// 14. USER IDENTITY
+// ============================================================
 
 export function getCurrentUser() {
 
-    return auth.currentUser;
+    return auth.currentUser || null;
 
 }
 
@@ -1442,114 +723,234 @@ export function getCurrentUserId() {
 }
 
 
-export function isAuthenticated() {
+/*
+ * Firebase UID remains the permanent identity.
+ *
+ * The special ID below is a stable display reference derived
+ * from that UID. It is not a separate authentication credential.
+ */
 
-    return Boolean(auth.currentUser);
+export function getBusinessOSSpecialId(
+    uid = getCurrentUserId()
+) {
+
+    if (!uid) {
+
+        return null;
+
+    }
+
+    return `BOS-${uid}`;
 
 }
 
 
-export async function getFirebaseIdToken(
-    forceRefresh = false
-) {
+export function getCurrentUserIdentity() {
 
     const user = auth.currentUser;
 
 
     if (!user) {
 
-        throw new Error(
-            "Please sign in to continue."
-        );
+        return null;
 
     }
 
 
-    return getIdToken(
-        user,
-        forceRefresh
-    );
+    return Object.freeze({
+
+        uid: user.uid,
+
+        userId: user.uid,
+
+        specialId: getBusinessOSSpecialId(user.uid),
+
+        email: user.email || null,
+
+        displayName: user.displayName || null,
+
+        photoURL: user.photoURL || null,
+
+        emailVerified: Boolean(user.emailVerified),
+
+        providerIds: (user.providerData || []).map(
+            item => item.providerId
+        )
+
+    });
 
 }
 
 
-/* ============================================================
-   24. AUTHENTICATION STATE LISTENER
-============================================================ */
 
-export function observeAuthState(
-    callback,
-    errorCallback = () => {}
+// ============================================================
+// NATIVE ANDROID / iOS APP DETECTION
+// ============================================================
+
+export function isNativeBusinessOSApp() {
+
+    try {
+
+        return Boolean(
+
+            typeof window !== "undefined" &&
+
+            window.Capacitor &&
+
+            typeof window.Capacitor.isNativePlatform === "function" &&
+
+            window.Capacitor.isNativePlatform()
+
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "BusinessOS native platform detection failed:",
+            error
+        );
+
+        return false;
+
+    }
+
+}
+
+
+// ============================================================
+// 15. FIRESTORE USER PROFILE REFERENCES
+// ============================================================
+
+export function getUserProfileReference(
+    uid = getCurrentUserId()
 ) {
-
-    if (typeof callback !== "function") {
-
-        throw new Error(
-            "A valid authentication callback is required."
-        );
-
-    }
-
-
-    return onAuthStateChanged(
-
-        auth,
-
-        async (user) => {
-
-            if (user) {
-
-                try {
-
-                    await ensureUserProfile(user);
-
-                } catch (error) {
-
-                    console.error(
-                        "Profile synchronization failed:",
-                        error
-                    );
-
-                }
-
-            }
-
-
-            callback(user);
-
-        },
-
-        (error) => {
-
-            errorCallback(
-                getFriendlyError(error)
-            );
-
-        }
-
-    );
-
-}
-
-
-/* ============================================================
-   25. GET USER PROFILE
-============================================================ */
-
-export async function getUserProfile(uid = getCurrentUserId()) {
 
     if (!uid) {
 
-        throw new Error("A user ID is required.");
+        throw new Error(
+            "A Firebase user ID is required."
+        );
 
     }
 
 
-    const profileRef = doc(
+    return doc(
         db,
         "users",
         uid
     );
+
+}
+
+
+function makeSafeAttribution() {
+
+    const attribution =
+        getPendingAttribution() || {};
+
+
+    return {
+
+        referralCode:
+            cleanCode(attribution.referralCode) || null,
+
+        invitationCode:
+            cleanCode(attribution.invitationCode) || null,
+
+        businessId:
+            cleanCode(attribution.businessId) || null
+
+    };
+
+}
+
+
+// ============================================================
+// 16. CREATE AND SYNCHRONIZE USER PROFILE
+// ============================================================
+
+/*
+ * Profile path:
+ *
+ * users/{firebaseUID}
+ *
+ * Stores:
+ * - Firebase UID
+ * - Email
+ * - Display name
+ * - Profile photo URL
+ * - Email verification status
+ * - Authentication provider IDs
+ * - Account status
+ * - Onboarding status
+ * - Preferred language
+ * - Country
+ * - Terms acceptance
+ * - Referral/invitation attribution
+ * - Creation and update timestamps
+ *
+ * Private phone verification is stored separately at:
+ *
+ * users/{uid}/private/contact
+ *
+ * The trusted backend controls phone verification status.
+ */
+
+export async function ensureUserProfile(
+    user = getCurrentUser(),
+    options = {}
+) {
+
+    await requireFirebase();
+
+
+    if (!user?.uid) {
+
+        throw new Error(
+            "A signed-in account is required."
+        );
+
+    }
+
+
+    const profileRef = getUserProfileReference(
+        user.uid
+    );
+
+
+    const providerIds = (user.providerData || [])
+
+        .map(item => cleanText(item.providerId, 80))
+
+        .filter(Boolean);
+
+
+    const displayName = cleanText(
+
+        options.displayName || user.displayName || "",
+
+        80
+
+    );
+
+
+    const photoURL =
+
+        user.photoURL && /^https:\/\//i.test(user.photoURL)
+
+            ? user.photoURL
+
+            : null;
+
+
+    const email = user.email
+        ? normalizeEmail(user.email)
+        : null;
+
+
+    // Ensure Firestore receives the latest email_verified claim.
+
+    await getIdToken(user, true);
 
 
     const snapshot = await getDoc(profileRef);
@@ -1557,80 +958,254 @@ export async function getUserProfile(uid = getCurrentUserId()) {
 
     if (!snapshot.exists()) {
 
-        return null;
+        const data = {
+
+            uid: user.uid,
+
+            email,
+
+            displayName,
+
+            photoURL,
+
+            emailVerified: Boolean(user.emailVerified),
+
+            providerIds,
+
+            accountStatus: "active",
+
+            onboardingStatus: "needs_profile",
+
+            preferredLanguage: "en",
+
+            country: null,
+
+            termsAccepted: options.acceptedTerms === true,
+
+            signupAttribution: makeSafeAttribution(),
+
+            createdAt: serverTimestamp(),
+
+            updatedAt: serverTimestamp()
+
+        };
+
+
+        await setDoc(
+            profileRef,
+            data
+        );
+
+
+        return {
+            uid: user.uid,
+            ...data
+        };
 
     }
 
 
+    const updates = {
+
+        email,
+
+        emailVerified: Boolean(user.emailVerified),
+
+        providerIds,
+
+        updatedAt: serverTimestamp()
+
+    };
+
+
+    // Do not erase a profile name or photo saved in Firestore
+    // when the current Auth provider does not return that field.
+
+    if (displayName) {
+
+        updates.displayName = displayName;
+
+    }
+
+
+    if (photoURL) {
+
+        updates.photoURL = photoURL;
+
+    }
+
+
+    if (
+        options.acceptedTerms === true &&
+        snapshot.data().termsAccepted !== true
+    ) {
+
+        updates.termsAccepted = true;
+
+    }
+
+
+    await updateDoc(
+        profileRef,
+        updates
+    );
+
+
     return {
 
-        uid: snapshot.id,
+        uid: user.uid,
 
-        ...snapshot.data()
+        ...snapshot.data(),
+
+        ...updates
 
     };
 
 }
 
 
-/* ============================================================
-   26. UPDATE PERSONAL USER PROFILE
-============================================================ */
+export async function createUserProfile(
+    user,
+    options = {}
+) {
 
-export async function updateUserProfile({
-    displayName,
-    photoURL,
-    preferredLanguage,
-    country,
-    notificationPreferences
-} = {}) {
+    return ensureUserProfile(
+        user,
+        options
+    );
 
-    const user = auth.currentUser;
+}
 
 
-    if (!user) {
+// ============================================================
+// 17. READ USER PROFILE
+// ============================================================
 
-        throw new Error("Please sign in first.");
+export async function getUserProfile(
+    uid = getCurrentUserId()
+) {
+
+    await requireFirebase();
+
+
+    if (!uid) {
+
+        throw new Error(
+            "A Firebase user ID is required."
+        );
 
     }
 
 
-    const firebaseUpdates = {};
+    const snapshot = await getDoc(
+        getUserProfileReference(uid)
+    );
 
-    const databaseUpdates = {};
+
+    return snapshot.exists()
+
+        ? {
+            uid: snapshot.id,
+            ...snapshot.data()
+          }
+
+        : null;
+
+}
+
+
+// ============================================================
+// 18. UPDATE PERSONAL USER PROFILE
+// ============================================================
+
+export async function updateUserProfile({
+
+    displayName,
+
+    photoURL,
+
+    preferredLanguage,
+
+    country,
+
+    notificationPreferences
+
+} = {}) {
+
+    await requireFirebase();
+
+
+    const user = getCurrentUser();
+
+
+    if (!user) {
+
+        throw new Error(
+            "Please sign in first."
+        );
+
+    }
+
+
+    const authUpdates = {};
+
+    const profileUpdates = {};
 
 
     if (displayName !== undefined) {
 
-        const name = cleanText(displayName, 80);
+        const name = cleanText(
+            displayName,
+            80
+        );
 
-        if (!name) {
+
+        if (name.length < 2) {
 
             throw new Error(
-                "Please enter a valid display name."
+                "Your display name must contain at least 2 characters."
             );
 
         }
 
-        firebaseUpdates.displayName = name;
 
-        databaseUpdates.displayName = name;
+        authUpdates.displayName = name;
+
+        profileUpdates.displayName = name;
 
     }
 
 
     if (photoURL !== undefined) {
 
-        firebaseUpdates.photoURL = photoURL;
+        const imageUrl = cleanText(
+            photoURL,
+            2048
+        );
 
-        databaseUpdates.photoURL = photoURL;
+
+        if (
+            imageUrl &&
+            !/^https:\/\//i.test(imageUrl)
+        ) {
+
+            throw new Error(
+                "Profile image URLs must use HTTPS."
+            );
+
+        }
+
+
+        authUpdates.photoURL = imageUrl || null;
+
+        profileUpdates.photoURL = imageUrl || null;
 
     }
 
 
     if (preferredLanguage !== undefined) {
 
-        databaseUpdates.preferredLanguage =
+        profileUpdates.preferredLanguage =
             cleanText(preferredLanguage, 20);
 
     }
@@ -1638,7 +1213,7 @@ export async function updateUserProfile({
 
     if (country !== undefined) {
 
-        databaseUpdates.country =
+        profileUpdates.country =
             cleanText(country, 80);
 
     }
@@ -1647,47 +1222,81 @@ export async function updateUserProfile({
     if (notificationPreferences !== undefined) {
 
         if (
+
             !notificationPreferences ||
+
             typeof notificationPreferences !== "object" ||
+
             Array.isArray(notificationPreferences)
+
         ) {
 
             throw new Error(
-                "Invalid notification preferences."
+                "Notification preferences must be an object."
             );
 
         }
 
-        databaseUpdates.notificationPreferences =
+
+        const allowed = [
+
+            "email",
+
+            "push",
+
+            "securityAlerts",
+
+            "productUpdates",
+
+            "marketing"
+
+        ];
+
+
+        if (
+
+            Object.keys(notificationPreferences).some(
+
+                key => !allowed.includes(key)
+
+            )
+
+        ) {
+
+            throw new Error(
+                "An unsupported notification preference was supplied."
+            );
+
+        }
+
+
+        profileUpdates.notificationPreferences =
             notificationPreferences;
 
     }
 
 
-    if (Object.keys(firebaseUpdates).length > 0) {
+    if (Object.keys(authUpdates).length) {
 
         await firebaseUpdateProfile(
             user,
-            firebaseUpdates
+            authUpdates
         );
 
     }
 
 
-    if (Object.keys(databaseUpdates).length > 0) {
+    if (Object.keys(profileUpdates).length) {
 
-        await ensureUserProfile(user);
-
-
-        databaseUpdates.updatedAt =
+        profileUpdates.updatedAt =
             serverTimestamp();
 
 
         await updateDoc(
 
-            doc(db, "users", user.uid),
+            getUserProfileReference(user.uid),
 
-            databaseUpdates
+            profileUpdates
 
         );
 
@@ -1699,29 +1308,33 @@ export async function updateUserProfile({
 }
 
 
-/* ============================================================
-   27. CHANGE EMAIL ADDRESS
-============================================================ */
+// ============================================================
+// 19. CHANGE ACCOUNT EMAIL
+// ============================================================
 
 export async function changeAccountEmail(newEmail) {
 
-    const user = auth.currentUser;
+    await requireFirebase();
+
+
+    const user = getCurrentUser();
+
+    const email = normalizeEmail(newEmail);
 
 
     if (!user) {
 
-        throw new Error("Please sign in first.");
+        throw new Error(
+            "Sign in before changing your email address."
+        );
 
     }
 
 
-    const normalizedEmail = normalizeEmail(newEmail);
-
-
-    if (!validEmail(normalizedEmail)) {
+    if (!isValidEmail(email)) {
 
         throw new Error(
-            "Please enter a valid email address."
+            "Enter a valid new email address."
         );
 
     }
@@ -1729,90 +1342,102 @@ export async function changeAccountEmail(newEmail) {
 
     try {
 
-        await updateEmail(
+        await firebaseUpdateEmail(
             user,
-            normalizedEmail
+            email
         );
 
 
-        await updateDoc(
+        await reload(user);
 
-            doc(db, "users", user.uid),
-
-            {
-
-                email: normalizedEmail,
-
-                emailVerified: false,
-
-                updatedAt: serverTimestamp()
-
-            }
-
-        );
+        await getIdToken(user, true);
 
 
-        await sendEmailVerification(
+        await firebaseSendEmailVerification(
             user,
-            getVerificationSettings()
+            getEmailActionSettings()
         );
+
+
+        try {
+
+            await ensureUserProfile(user);
+
+        } catch (profileError) {
+
+            console.warn(
+                "New email saved; profile sync will retry:",
+                profileError
+            );
+
+        }
 
 
         return {
 
             success: true,
 
+            verificationSent: true,
+
             message:
-                "Your new email address has been saved. Please verify it."
+                "Your email address was changed. Verify the new address to continue."
 
         };
 
     } catch (error) {
 
-        throw new Error(
-            getFriendlyError(error)
-        );
+        throw getFriendlyError(error);
 
     }
 
 }
 
 
-/* ============================================================
-   28. CHANGE PASSWORD
-============================================================ */
+// ============================================================
+// 20. CHANGE ACCOUNT PASSWORD
+// ============================================================
 
 export async function changeAccountPassword({
+
     currentPassword,
+
     newPassword,
+
     confirmPassword
+
 } = {}) {
 
-    const user = auth.currentUser;
+    await requireFirebase();
 
 
-    if (!user || !user.email) {
+    const user = getCurrentUser();
+
+
+    if (!user?.email) {
 
         throw new Error(
-            "This account cannot use email/password reauthentication."
+            "A signed-in email/password account is required."
         );
 
     }
 
 
-    if (!validPassword(newPassword)) {
+    if (!currentPassword) {
 
         throw new Error(
-            "Your new password must contain at least 8 characters."
+            "Enter your current password."
         );
 
     }
+
+
+    validatePassword(newPassword);
 
 
     if (newPassword !== confirmPassword) {
 
         throw new Error(
-            "Your passwords do not match."
+            "Your new passwords do not match."
         );
 
     }
@@ -1833,98 +1458,1245 @@ export async function changeAccountPassword({
         );
 
 
-        await updatePassword(
+        await firebaseUpdatePassword(
             user,
             newPassword
         );
 
 
         return {
-
-            success: true,
-
-            message: "Your password has been changed."
-
+            success: true
         };
 
     } catch (error) {
 
-        throw new Error(
-            getFriendlyError(error)
-        );
+        throw getFriendlyError(error);
 
     }
 
 }
 
 
-/* ============================================================
-   29. SIGN OUT
-============================================================ */
+// ============================================================
+// 21. EMAIL VERIFICATION ACTION SETTINGS
+// ============================================================
 
-export async function logoutUser() {
+function getEmailActionSettings() {
+
+    const origin = window.location.origin;
+
+
+    return {
+
+        /*
+         * This is the continue URL after Firebase completes
+         * the email action handler.
+         *
+         * The custom action handler itself must be configured
+         * separately in Firebase Authentication email templates.
+         */
+
+        url: new URL(
+
+            BUSINESSOS_ROUTES.workspace,
+
+            origin
+
+        ).toString(),
+
+        handleCodeInApp: false
+
+    };
+
+}
+
+
+// ============================================================
+// 22. SEND REAL FIREBASE VERIFICATION EMAIL
+// ============================================================
+
+export async function sendEmailVerification(
+    user = getCurrentUser()
+) {
+
+    await requireFirebase();
+
+
+    if (!user) {
+
+        throw new Error(
+            "Sign in to the account that needs email verification."
+        );
+
+    }
+
+
+    await reload(user);
+
+
+    if (user.emailVerified) {
+
+        return {
+
+            sent: false,
+
+            alreadyVerified: true,
+
+            cooldown: false
+
+        };
+
+    }
+
+
+    const lastSentAt = Number(
+
+        readStorage(
+            STORAGE_KEYS.verificationLastSent
+        ) || 0
+
+    );
+
+
+    const secondsRemaining =
+
+        VERIFICATION_RESEND_SECONDS -
+
+        Math.floor(
+            (Date.now() - lastSentAt) / 1000
+        );
+
+
+    if (
+        lastSentAt > 0 &&
+        secondsRemaining > 0
+    ) {
+
+        return {
+
+            sent: false,
+
+            alreadyVerified: false,
+
+            cooldown: true,
+
+            secondsRemaining
+
+        };
+
+    }
+
 
     try {
 
-        await signOut(auth);
-
-
         /*
-            Keep the returning-user indicator.
-            The splash page will direct this device to login.
-        */
+         * This calls Firebase Authentication's real
+         * sendEmailVerification function.
+         *
+         * Firebase creates the one-time action link and
+         * sends its configured verification email.
+         */
+
+        await firebaseSendEmailVerification(
+
+            user,
+
+            getEmailActionSettings()
+
+        );
+
 
         writeStorage(
-            RETURNING_USER_KEY,
-            "true"
+
+            STORAGE_KEYS.verificationLastSent,
+
+            String(Date.now())
+
         );
 
 
         return {
 
-            success: true
+            sent: true,
+
+            alreadyVerified: false,
+
+            cooldown: false
 
         };
 
     } catch (error) {
 
-        throw new Error(
-            getFriendlyError(error)
-        );
+        throw getFriendlyError(error);
 
     }
 
 }
 
 
-/* ============================================================
-   30. AUTHENTICATION GUARD
-============================================================ */
+// ============================================================
+// 23. RESEND VERIFICATION EMAIL
+// ============================================================
 
-export async function requireAuthentication({
-    redirectTo = LOGIN_PAGE
-} = {}) {
+export async function resendEmailVerification() {
 
-    const user = auth.currentUser;
+    return sendEmailVerification(
+        getCurrentUser()
+    );
+
+}
+
+
+// ============================================================
+// 24. REFRESH EMAIL VERIFICATION STATUS
+// ============================================================
+
+export async function refreshEmailVerification() {
+
+    await requireFirebase();
+
+
+    const user = getCurrentUser();
 
 
     if (!user) {
 
-        const returnPath =
-            window.location.pathname +
-            window.location.search;
+        return {
+
+            signedIn: false,
+
+            emailVerified: false,
+
+            user: null
+
+        };
+
+    }
 
 
-        const destination =
-            new URL(
-                redirectTo,
-                window.location.href
+    await reload(user);
+
+    await getIdToken(user, true);
+
+
+    let profileSyncError = null;
+
+
+    try {
+
+        await ensureUserProfile(user);
+
+    } catch (error) {
+
+        profileSyncError = getFriendlyError(error);
+
+        console.warn(
+            "Email is verified in Firebase Auth, but profile sync is pending:",
+            error
+        );
+
+    }
+
+
+    return {
+
+        signedIn: true,
+
+        emailVerified: Boolean(user.emailVerified),
+
+        user,
+
+        profileSyncError
+
+    };
+
+}
+
+
+// ============================================================
+// 25. COMPLETE EMAIL VERIFICATION LINK
+// ============================================================
+
+/*
+ * Firebase custom action handler parameters:
+ *
+ * mode=verifyEmail
+ * oobCode=ONE_TIME_CODE
+ * apiKey=FIREBASE_API_KEY
+ * continueUrl=OPTIONAL_CONTINUE_URL
+ * lang=OPTIONAL_LANGUAGE
+ *
+ * This function validates and applies the one-time code.
+ */
+
+export async function completeEmailVerificationFromLink(
+    url = window.location.href
+) {
+
+    await requireFirebase();
+
+
+    const parsed = new URL(url);
+
+    const mode =
+        parsed.searchParams.get("mode");
+
+    const actionCode =
+        parsed.searchParams.get("oobCode");
+
+
+    if (
+        mode !== "verifyEmail" ||
+        !actionCode
+    ) {
+
+        return {
+
+            handled: false,
+
+            verified: false,
+
+            reason: "missing-action-code"
+
+        };
+
+    }
+
+
+    try {
+
+        const actionInfo = await checkActionCode(
+            auth,
+            actionCode
+        );
+
+
+        const verifiedEmail = normalizeEmail(
+            actionInfo?.data?.email || ""
+        );
+
+
+        if (!verifiedEmail) {
+
+            throw new Error(
+                "Firebase did not return the email associated with this verification link."
+            );
+
+        }
+
+
+        await applyActionCode(
+            auth,
+            actionCode
+        );
+
+
+        // Remove the one-time code from the URL.
+
+        parsed.searchParams.delete("oobCode");
+
+        parsed.searchParams.delete("apiKey");
+
+        parsed.searchParams.delete("mode");
+
+        parsed.searchParams.delete("lang");
+
+        parsed.searchParams.delete("continueUrl");
+
+
+        const remaining =
+            parsed.searchParams.toString();
+
+
+        window.history.replaceState(
+
+            {},
+
+            document.title,
+
+            `${parsed.pathname}${remaining ? `?${remaining}` : ""}${parsed.hash}`
+
+        );
+
+
+        const currentUser = getCurrentUser();
+
+
+        const matchesCurrentSession = Boolean(
+
+            currentUser?.email &&
+
+            normalizeEmail(currentUser.email) === verifiedEmail
+
+        );
+
+
+        if (matchesCurrentSession) {
+
+            await reload(currentUser);
+
+            await getIdToken(currentUser, true);
+
+
+            try {
+
+                await ensureUserProfile(currentUser);
+
+            } catch (profileError) {
+
+                console.warn(
+                    "Verification succeeded; profile sync will retry later:",
+                    profileError
+                );
+
+            }
+
+        }
+
+
+        return {
+
+            handled: true,
+
+            verified: true,
+
+            email: verifiedEmail,
+
+            matchesCurrentSession,
+
+            user: matchesCurrentSession
+                ? currentUser
+                : null
+
+        };
+
+    } catch (error) {
+
+        throw getFriendlyError(error);
+
+    }
+
+}
+
+
+// ============================================================
+// 26. EMAIL/PASSWORD REGISTRATION
+// ============================================================
+
+export async function registerWithEmail({
+
+    displayName,
+
+    email,
+
+    password,
+
+    confirmPassword,
+
+    acceptedTerms
+
+} = {}) {
+
+    await requireFirebase();
+
+
+    const name = cleanText(
+        displayName,
+        80
+    );
+
+
+    const normalizedEmail =
+        normalizeEmail(email);
+
+
+    if (name.length < 2) {
+
+        throw new Error(
+            "Enter your full name (at least 2 characters)."
+        );
+
+    }
+
+
+    if (!isValidEmail(normalizedEmail)) {
+
+        throw new Error(
+            "Enter a valid email address."
+        );
+
+    }
+
+
+    validatePassword(password);
+
+
+    if (
+        confirmPassword !== undefined &&
+        password !== confirmPassword
+    ) {
+
+        throw new Error(
+            "Your passwords do not match."
+        );
+
+    }
+
+
+    if (acceptedTerms !== true) {
+
+        throw new Error(
+            "Accept the Terms of Service and Privacy Notice to continue."
+        );
+
+    }
+
+
+    // Create the actual Firebase Authentication account.
+
+    let credential;
+
+
+    try {
+
+        credential =
+            await createUserWithEmailAndPassword(
+
+                auth,
+
+                normalizedEmail,
+
+                password
+
+            );
+
+    } catch (error) {
+
+        throw getFriendlyError(error);
+
+    }
+
+
+    const user = credential.user;
+
+
+    markReturningUser();
+
+
+    /*
+     * A profile-sync failure must not prevent us from attempting
+     * to send the verification email after account creation.
+     */
+
+    let profileSyncError = null;
+
+
+    try {
+
+        await firebaseUpdateProfile(
+
+            user,
+
+            { displayName: name }
+
+        );
+
+
+        await reload(user);
+
+
+        await ensureUserProfile(
+
+            user,
+
+            {
+
+                displayName: name,
+
+                acceptedTerms: true
+
+            }
+
+        );
+
+    } catch (error) {
+
+        profileSyncError = getFriendlyError(error);
+
+        console.error(
+            "Account created; profile synchronisation needs attention:",
+            error
+        );
+
+    }
+
+
+    // Send the real Firebase verification email.
+
+    let verificationSent = false;
+
+    let verificationError = null;
+
+
+    try {
+
+        const result = await sendEmailVerification(user);
+
+
+        verificationSent = Boolean(
+
+            result.sent ||
+
+            result.alreadyVerified
+
+        );
+
+
+        if (result.cooldown) {
+
+            verificationError = new Error(
+
+                `Please wait ${result.secondsRemaining} seconds before requesting another email.`
+
+            );
+
+        }
+
+    } catch (error) {
+
+        verificationError = getFriendlyError(error);
+
+    }
+
+
+    return {
+
+        user,
+
+        profileSyncError,
+
+        verificationSent,
+
+        emailVerificationSent: verificationSent,
+
+        verificationError,
+
+        emailVerificationError: verificationError,
+
+        needsEmailVerification: !user.emailVerified,
+
+        requiresEmailVerification: !user.emailVerified
+
+    };
+
+}
+
+
+// ============================================================
+// 27. EMAIL/PASSWORD LOGIN
+// ============================================================
+
+export async function loginWithEmail({
+
+    email,
+
+    password
+
+} = {}) {
+
+    await requireFirebase();
+
+
+    const normalizedEmail =
+        normalizeEmail(email);
+
+
+    if (!isValidEmail(normalizedEmail)) {
+
+        throw new Error(
+            "Enter a valid email address."
+        );
+
+    }
+
+
+    if (
+        typeof password !== "string" ||
+        !password
+    ) {
+
+        throw new Error(
+            "Enter your password."
+        );
+
+    }
+
+
+    try {
+
+        const credential =
+            await signInWithEmailAndPassword(
+
+                auth,
+
+                normalizedEmail,
+
+                password
+
             );
 
 
+        await reload(credential.user);
+
+        await getIdToken(credential.user, true);
+
+
+        markReturningUser();
+
+
+        let profileSyncError = null;
+
+
+        try {
+
+            await ensureUserProfile(
+                credential.user
+            );
+
+        } catch (error) {
+
+            profileSyncError = getFriendlyError(error);
+
+        }
+
+
+        return {
+
+            user: credential.user,
+
+            emailVerified: Boolean(
+                credential.user.emailVerified
+            ),
+
+            needsEmailVerification:
+                !credential.user.emailVerified,
+
+            profileSyncError
+
+        };
+
+    } catch (error) {
+
+        throw getFriendlyError(error);
+
+    }
+
+}
+
+
+// ============================================================
+// 28. GOOGLE SIGN-IN
+// ============================================================
+
+function isPopupFallbackError(error) {
+
+    return [
+
+        "auth/popup-blocked",
+
+        "auth/operation-not-supported-in-this-environment",
+
+        "auth/web-storage-unsupported",
+
+        "auth/unsupported-persistence-type"
+
+    ].includes(String(error?.code || ""));
+
+}
+
+
+export async function loginWithGoogle() {
+
+    await requireFirebase();
+
+
+    try {
+
+        const credential =
+            await signInWithPopup(
+
+                auth,
+
+                googleProvider
+
+            );
+
+
+        await reload(credential.user);
+
+
+        await ensureUserProfile(
+
+            credential.user,
+
+            { acceptedTerms: true }
+
+        );
+
+
+        markReturningUser();
+
+
+        return {
+
+            user: credential.user,
+
+            redirecting: false
+
+        };
+
+    } catch (error) {
+
+        if (
+
+            error?.code === "auth/popup-closed-by-user" ||
+
+            error?.code === "auth/cancelled-popup-request"
+
+        ) {
+
+            throw getFriendlyError(error);
+
+        }
+
+
+        if (!isPopupFallbackError(error)) {
+
+            throw getFriendlyError(error);
+
+        }
+
+
+        // Fallback when popup authentication is not supported.
+
+        try {
+
+            await signInWithRedirect(
+                auth,
+                googleProvider
+            );
+
+
+            return {
+
+                user: null,
+
+                redirecting: true
+
+            };
+
+        } catch (redirectError) {
+
+            throw getFriendlyError(redirectError);
+
+        }
+
+    }
+
+}
+
+
+// ============================================================
+// 29. COMPLETE GOOGLE REDIRECT
+// ============================================================
+
+export async function completeGoogleRedirect() {
+
+    await requireFirebase();
+
+
+    try {
+
+        const result = await getRedirectResult(auth);
+
+
+        if (!result?.user) {
+
+            return null;
+
+        }
+
+
+        await ensureUserProfile(
+
+            result.user,
+
+            { acceptedTerms: true }
+
+        );
+
+
+        markReturningUser();
+
+
+        return {
+
+            user: result.user
+
+        };
+
+    } catch (error) {
+
+        throw getFriendlyError(error);
+
+    }
+
+}
+
+
+// ============================================================
+// 30. PASSWORD RECOVERY
+// ============================================================
+
+export async function sendPasswordRecoveryEmail(email) {
+
+    await requireFirebase();
+
+
+    const normalizedEmail =
+        normalizeEmail(email);
+
+
+    if (!isValidEmail(normalizedEmail)) {
+
+        throw new Error(
+            "Enter a valid email address."
+        );
+
+    }
+
+
+    try {
+
+        await sendPasswordResetEmail(
+
+            auth,
+
+            normalizedEmail,
+
+            {
+
+                url: new URL(
+
+                    BUSINESSOS_ROUTES.login,
+
+                    window.location.origin
+
+                ).toString(),
+
+                handleCodeInApp: false
+
+            }
+
+        );
+
+    } catch (error) {
+
+        // Do not reveal whether an email is registered.
+
+        if (
+
+            ![
+
+                "auth/user-not-found",
+
+                "auth/invalid-email"
+
+            ].includes(error?.code)
+
+        ) {
+
+            throw getFriendlyError(error);
+
+        }
+
+    }
+
+
+    return {
+
+        success: true,
+
+        message:
+            "If an account matches that address, a password-reset email will be sent."
+
+    };
+
+}
+
+
+// ============================================================
+// 31. COMPLETE PASSWORD RESET
+// ============================================================
+
+export async function resetPassword({
+
+    actionCode,
+
+    newPassword,
+
+    confirmPassword
+
+} = {}) {
+
+    await requireFirebase();
+
+
+    if (!actionCode) {
+
+        throw new Error(
+            "The password-reset link is incomplete."
+        );
+
+    }
+
+
+    validatePassword(newPassword);
+
+
+    if (newPassword !== confirmPassword) {
+
+        throw new Error(
+            "Your passwords do not match."
+        );
+
+    }
+
+
+    try {
+
+        await confirmPasswordReset(
+
+            auth,
+
+            actionCode,
+
+            newPassword
+
+        );
+
+
+        return {
+            success: true
+        };
+
+    } catch (error) {
+
+        throw getFriendlyError(error);
+
+    }
+
+}
+
+
+// ============================================================
+// 32. PROVIDER CHECKS
+// ============================================================
+
+export function isEmailPasswordUser(
+    user = getCurrentUser()
+) {
+
+    return Boolean(
+
+        user?.providerData?.some(
+
+            provider =>
+                provider.providerId === "password"
+
+        )
+
+    );
+
+}
+
+
+export function isGoogleUser(
+    user = getCurrentUser()
+) {
+
+    return Boolean(
+
+        user?.providerData?.some(
+
+            provider =>
+                provider.providerId === "google.com"
+
+        )
+
+    );
+
+}
+
+
+export function isAuthenticated() {
+
+    return Boolean(
+        getCurrentUser()
+    );
+
+}
+
+
+// ============================================================
+// 33. FIREBASE ID TOKEN
+// ============================================================
+
+export async function getFirebaseIdToken(
+    forceRefresh = false
+) {
+
+    await requireFirebase();
+
+
+    const user = getCurrentUser();
+
+
+    if (!user) {
+
+        throw new Error(
+            "Sign in before requesting an account token."
+        );
+
+    }
+
+
+    return getIdToken(
+
+        user,
+
+        Boolean(forceRefresh)
+
+    );
+
+}
+
+
+// ============================================================
+// 34. AUTHENTICATION STATE LISTENER
+// ============================================================
+
+export function observeAuthState(
+    callback,
+
+    errorCallback = console.error
+
+) {
+
+    if (typeof callback !== "function") {
+
+        throw new TypeError(
+            "An authentication callback is required."
+        );
+
+    }
+
+
+    return onAuthStateChanged(
+
+        auth,
+
+        callback,
+
+        errorCallback
+
+    );
+
+}
+
+
+export async function waitForInitialAuthState() {
+
+    await firebaseReady;
+
+
+    return new Promise((resolve, reject) => {
+
+        let unsubscribe = null;
+
+
+        unsubscribe = onAuthStateChanged(
+
+            auth,
+
+            (user) => {
+
+                if (unsubscribe) {
+
+                    unsubscribe();
+
+                }
+
+
+                resolve(user || null);
+
+            },
+
+            (error) => {
+
+                if (unsubscribe) {
+
+                    unsubscribe();
+
+                }
+
+
+                reject(error);
+
+            }
+
+        );
+
+    });
+
+}
+
+
+// ============================================================
+// 35. AUTHENTICATION GUARD
+// ============================================================
+
+export async function requireAuthentication({
+
+    redirectTo = BUSINESSOS_ROUTES.login
+
+} = {}) {
+
+    await firebaseReady;
+
+
+    const user =
+        await waitForInitialAuthState();
+
+
+    if (!user) {
+
+        const destination = new URL(
+
+            redirectTo,
+
+            window.location.href
+
+        );
+
+
         destination.searchParams.set(
+
             "returnTo",
-            returnPath
+
+            window.location.pathname +
+            window.location.search
+
         );
 
 
@@ -1943,20 +2715,103 @@ export async function requireAuthentication({
 }
 
 
-/* ============================================================
-   31. BUSINESS NAME UTILITIES
-============================================================ */
+// ============================================================
+// 36. VERIFIED EMAIL GUARD
+// ============================================================
+
+export async function requireVerifiedUser({
+
+    redirectTo = BUSINESSOS_ROUTES.verification
+
+} = {}) {
+
+    const user =
+        await requireAuthentication();
+
+
+    if (!user) {
+
+        return null;
+
+    }
+
+
+    await reload(user);
+
+
+    if (
+
+        isEmailPasswordUser(user) &&
+
+        !user.emailVerified
+
+    ) {
+
+        window.location.replace(
+            redirectTo
+        );
+
+
+        return null;
+
+    }
+
+
+    return user;
+
+}
+
+
+// ============================================================
+// 37. SIGN OUT
+// ============================================================
+
+export async function logoutUser() {
+
+    await requireFirebase();
+
+
+    try {
+
+        await signOut(auth);
+
+
+        markReturningUser();
+
+
+        return {
+            success: true
+        };
+
+    } catch (error) {
+
+        throw getFriendlyError(error);
+
+    }
+
+}
+
+
+// ============================================================
+// 38. BUSINESS NAME UTILITIES
+// ============================================================
 
 function normalizeBusinessName(name) {
 
-    return cleanText(name, 120).toLowerCase();
+    return cleanText(
+        name,
+        120
+    ).toLowerCase();
 
 }
 
 
 function createBusinessSlug(name, id) {
 
-    const base = cleanText(name, 100)
+    const base = cleanText(
+        name,
+        100
+    )
 
         .toLowerCase()
 
@@ -1965,31 +2820,30 @@ function createBusinessSlug(name, id) {
         .replace(/^-+|-+$/g, "");
 
 
-    return (
-        (base || "business") +
-        "-" +
-        id.slice(0, 6).toLowerCase()
-    );
+    return `${base || "business"}-${id.slice(0, 6).toLowerCase()}`;
 
 }
 
 
-/* ============================================================
-   32. CREATE BUSINESS DRAFT
-============================================================ */
+// ============================================================
+// 39. CREATE BUSINESS DRAFT
+// ============================================================
 
 /*
-    One person can own multiple businesses.
-
-    Business identity is separate from personal identity.
-
-    businesses/{businessId}
-
-    businesses/{businessId}/members/{uid}
-
-    users/{uid}/businessMemberships/{businessId}
-*/
-
+ * Business path:
+ *
+ * businesses/{businessId}
+ *
+ * Membership:
+ *
+ * businesses/{businessId}/members/{uid}
+ *
+ * User membership index:
+ *
+ * users/{uid}/businessMemberships/{businessId}
+ *
+ * A user may own multiple businesses.
+ */
 
 export async function createBusinessDraft({
 
@@ -2007,28 +2861,40 @@ export async function createBusinessDraft({
 
 } = {}) {
 
-    const user = auth.currentUser;
+    await requireFirebase();
+
+
+    const user = getCurrentUser();
 
 
     if (!user) {
 
         throw new Error(
-            "Please sign in before creating a business."
+            "Sign in before creating a business."
         );
 
     }
 
 
-    const businessName = cleanText(name, 120);
+    if (
 
+        isEmailPasswordUser(user) &&
 
-    if (businessName.length < 2) {
+        !user.emailVerified
+
+    ) {
 
         throw new Error(
-            "Please enter a valid business name."
+            "Verify your email before creating a business."
         );
 
     }
+
+
+    const businessName = cleanText(
+        name,
+        120
+    );
 
 
     const businessCategory = cleanText(
@@ -2037,16 +2903,27 @@ export async function createBusinessDraft({
     );
 
 
-    if (!businessCategory) {
+    if (businessName.length < 2) {
 
         throw new Error(
-            "Please select a business category."
+            "Enter a valid business name."
         );
 
     }
 
 
-    await ensureUserProfile(user);
+    if (!businessCategory) {
+
+        throw new Error(
+            "Select a business category."
+        );
+
+    }
+
+
+    const userRef = getUserProfileReference(
+        user.uid
+    );
 
 
     const businessRef = doc(
@@ -2058,27 +2935,32 @@ export async function createBusinessDraft({
 
 
     const memberRef = doc(
+
         db,
+
         "businesses",
+
         businessId,
+
         "members",
+
         user.uid
+
     );
 
 
     const membershipIndexRef = doc(
+
         db,
+
         "users",
+
         user.uid,
+
         "businessMemberships",
+
         businessId
-    );
 
-
-    const userRef = doc(
-        db,
-        "users",
-        user.uid
     );
 
 
@@ -2102,11 +2984,14 @@ export async function createBusinessDraft({
         description:
             cleanText(description, 1000),
 
-        country: cleanText(country, 80),
+        country:
+            cleanText(country, 80),
 
-        region: cleanText(region, 80),
+        region:
+            cleanText(region, 80),
 
-        city: cleanText(city, 80),
+        city:
+            cleanText(city, 80),
 
         ownerUid: user.uid,
 
@@ -2121,87 +3006,125 @@ export async function createBusinessDraft({
     };
 
 
-    await runTransaction(db, async (transaction) => {
+    try {
 
-        const profileSnapshot =
-            await transaction.get(userRef);
+        await runTransaction(
 
+            db,
 
-        if (!profileSnapshot.exists()) {
+            async (transaction) => {
 
-            throw new Error(
-                "Your personal profile must be completed first."
-            );
-
-        }
+                const profileSnapshot =
+                    await transaction.get(userRef);
 
 
-        transaction.set(
-            businessRef,
-            businessData
+                if (!profileSnapshot.exists()) {
+
+                    throw new Error(
+                        "Create your personal profile before registering a business."
+                    );
+
+                }
+
+
+                transaction.set(
+                    businessRef,
+                    businessData
+                );
+
+
+                transaction.set(
+
+                    memberRef,
+
+                    {
+
+                        uid: user.uid,
+
+                        businessId,
+
+                        role: "owner",
+
+                        status: "active",
+
+                        createdAt: serverTimestamp()
+
+                    }
+
+                );
+
+
+                transaction.set(
+
+                    membershipIndexRef,
+
+                    {
+
+                        businessId,
+
+                        businessName,
+
+                        role: "owner",
+
+                        status: "active",
+
+                        createdAt: serverTimestamp()
+
+                    }
+
+                );
+
+
+                transaction.update(
+
+                    userRef,
+
+                    {
+
+                        onboardingStatus: "business_created",
+
+                        updatedAt: serverTimestamp()
+
+                    }
+
+                );
+
+            }
+
         );
 
 
-        transaction.set(memberRef, {
-
-            uid: user.uid,
+        return {
 
             businessId,
 
-            role: "owner",
+            business: businessData
 
-            status: "active",
+        };
 
-            createdAt: serverTimestamp()
+    } catch (error) {
 
-        });
+        throw getFriendlyError(error);
 
-
-        transaction.set(membershipIndexRef, {
-
-            businessId,
-
-            businessName,
-
-            role: "owner",
-
-            status: "active",
-
-            createdAt: serverTimestamp()
-
-        });
-
-
-        transaction.update(userRef, {
-
-            onboardingStatus: "business_created",
-
-            updatedAt: serverTimestamp()
-
-        });
-
-    });
-
-
-    return {
-
-        businessId,
-
-        business: businessData
-
-    };
+    }
 
 }
 
 
-/* ============================================================
-   33. GET BUSINESS MEMBERSHIP
-============================================================ */
+// ============================================================
+// 40. GET BUSINESS MEMBERSHIP
+// ============================================================
 
 export async function getBusinessMembership(
+
     businessId,
+
     uid = getCurrentUserId()
+
 ) {
+
+    await requireFirebase();
+
 
     if (!uid || !businessId) {
 
@@ -2212,41 +3135,35 @@ export async function getBusinessMembership(
     }
 
 
-    const membershipRef = doc(
-
-        db,
-
-        "businesses",
-
-        businessId,
-
-        "members",
-
-        uid
-
-    );
-
-
     const snapshot = await getDoc(
-        membershipRef
+
+        doc(
+
+            db,
+
+            "businesses",
+
+            businessId,
+
+            "members",
+
+            uid
+
+        )
+
     );
 
 
-    if (!snapshot.exists()) {
-
-        return null;
-
-    }
-
-
-    return snapshot.data();
+    return snapshot.exists()
+        ? snapshot.data()
+        : null;
 
 }
 
 
-/* ============================================================
-   34. CHECK BUSINESS ROLE
-============================================================ */
+// ============================================================
+// 41. BUSINESS ROLE VALIDATION
+// ============================================================
 
 export async function requireBusinessRole({
 
@@ -2256,12 +3173,14 @@ export async function requireBusinessRole({
 
 } = {}) {
 
-    const user = auth.currentUser;
+    const user = getCurrentUser();
 
 
     if (!user) {
 
-        throw new Error("Please sign in first.");
+        throw new Error(
+            "Sign in first."
+        );
 
     }
 
@@ -2274,8 +3193,11 @@ export async function requireBusinessRole({
 
 
     if (
+
         !membership ||
+
         membership.status !== "active"
+
     ) {
 
         throw new Error(
@@ -2287,7 +3209,7 @@ export async function requireBusinessRole({
 
     if (
 
-        allowedRoles.length > 0 &&
+        allowedRoles.length &&
 
         !allowedRoles.includes(
             membership.role
@@ -2307,94 +3229,106 @@ export async function requireBusinessRole({
 }
 
 
-/* ============================================================
-   35. GET MY BUSINESSES
-============================================================ */
+// ============================================================
+// 42. GET MY BUSINESSES
+// ============================================================
 
 export async function getMyBusinesses() {
 
-    const user = auth.currentUser;
+    await requireFirebase();
+
+
+    const user = getCurrentUser();
 
 
     if (!user) {
 
-        throw new Error("Please sign in first.");
+        throw new Error(
+            "Sign in first."
+        );
 
     }
 
 
-    const memberships = await getDocs(
+    const snapshot = await getDocs(
 
         collection(
+
             db,
+
             "users",
+
             user.uid,
+
             "businessMemberships"
+
         )
 
     );
 
 
-    return memberships.docs.map(
+    return snapshot.docs.map(
+
         item => ({
+
             id: item.id,
+
             ...item.data()
+
         })
+
     );
 
 }
 
 
-/* ============================================================
-   36. PHONE VERIFICATION STATUS
-============================================================ */
+// ============================================================
+// 43. PHONE VERIFICATION STATUS
+// ============================================================
 
 /*
-    Phone verification is required before the user starts
-    a new one-to-one chat.
-
-    IMPORTANT:
-
-    OTP codes must be generated and verified by a trusted
-    backend, never by this browser file.
-
-    Private contact record:
-
-    users/{uid}/private/contact
-
-    The backend should control verifiedAt and phoneVerifiedAt.
-*/
-
+ * Private path:
+ *
+ * users/{uid}/private/contact
+ *
+ * The trusted backend writes phoneVerifiedAt.
+ *
+ * Do not let a browser set its own verified flag.
+ */
 
 export async function isPhoneVerified() {
 
-    const user = auth.currentUser;
+    await requireFirebase();
+
+
+    const user = getCurrentUser();
 
 
     if (!user) {
 
-        throw new Error("Please sign in first.");
+        throw new Error(
+            "Sign in first."
+        );
 
     }
 
 
-    const contactRef = doc(
-
-        db,
-
-        "users",
-
-        user.uid,
-
-        "private",
-
-        "contact"
-
-    );
-
-
     const snapshot = await getDoc(
-        contactRef
+
+        doc(
+
+            db,
+
+            "users",
+
+            user.uid,
+
+            "private",
+
+            "contact"
+
+        )
+
     );
 
 
@@ -2405,26 +3339,185 @@ export async function isPhoneVerified() {
     }
 
 
-    const data = snapshot.data();
+    const value =
+        snapshot.data().phoneVerifiedAt;
 
 
     return Boolean(
-        data.phoneVerifiedAt ||
-        data.verifiedAt
+
+        value instanceof Date ||
+
+        value?.toDate
+
     );
 
 }
 
 
+// ============================================================
+// 44. PHONE VERIFICATION BACKEND ADAPTER
+// ============================================================
+
+async function callPhoneVerificationBackend(
+    action,
+    payload
+) {
+
+    const user = getCurrentUser();
+
+
+    if (!user) {
+
+        throw new Error(
+            "Sign in first."
+        );
+
+    }
+
+
+    const service = window.BusinessOSBackend;
+
+
+    const method =
+
+        action === "request"
+
+            ? service?.requestPhoneVerification
+
+            : service?.confirmPhoneVerification;
+
+
+    if (typeof method !== "function") {
+
+        throw new Error(
+            "The secure phone-verification backend has not been deployed yet."
+        );
+
+    }
+
+
+    const idToken = await getIdToken(
+        user,
+        true
+    );
+
+
+    return method({
+
+        ...payload,
+
+        idToken
+
+    });
+
+}
+
+
+// ============================================================
+// 45. REQUEST PHONE VERIFICATION
+// ============================================================
+
+export async function requestPhoneVerification(phoneNumber) {
+
+    const phone = cleanText(
+        phoneNumber,
+        25
+    );
+
+
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+
+        throw new Error(
+            "Enter a phone number in international format, for example +233XXXXXXXXX."
+        );
+
+    }
+
+
+    return callPhoneVerificationBackend(
+
+        "request",
+
+        { phoneNumber: phone }
+
+    );
+
+}
+
+
+// ============================================================
+// 46. CONFIRM PHONE VERIFICATION
+// ============================================================
+
+export async function confirmPhoneVerification({
+
+    phoneNumber,
+
+    code
+
+} = {}) {
+
+    const phone = cleanText(
+        phoneNumber,
+        25
+    );
+
+
+    const otp = cleanText(
+        code,
+        10
+    );
+
+
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+
+        throw new Error(
+            "Enter a valid international phone number."
+        );
+
+    }
+
+
+    if (!/^\d{6}$/.test(otp)) {
+
+        throw new Error(
+            "Enter the six-digit verification code."
+        );
+
+    }
+
+
+    return callPhoneVerificationBackend(
+
+        "confirm",
+
+        {
+
+            phoneNumber: phone,
+
+            code: otp
+
+        }
+
+    );
+
+}
+
+
+// ============================================================
+// 47. REQUIRE VERIFIED PHONE
+// ============================================================
+
 export async function requireVerifiedPhone() {
 
-    const verified = await isPhoneVerified();
+    const verified =
+        await isPhoneVerified();
 
 
     if (!verified) {
 
         throw new Error(
-            "Please verify your phone number before starting a new conversation."
+            "Verify your phone number before starting a new conversation."
         );
 
     }
@@ -2435,389 +3528,132 @@ export async function requireVerifiedPhone() {
 }
 
 
-/* ============================================================
-   37. SECURE PHONE VERIFICATION BACKEND INTEGRATION
-============================================================ */
+// ============================================================
+// 48. PRIVATE CONTACT REFERENCE
+// ============================================================
 
-/*
-    The backend adapter will be connected when the Node.js
-    Cloud Functions or Cloud Run verification service exists.
+export function getPrivateContactReference(
+    uid = getCurrentUserId()
+) {
 
-    This file never generates a real OTP in browser JavaScript.
-*/
+    if (!uid) {
+
+        throw new Error(
+            "A Firebase user ID is required."
+        );
+
+    }
 
 
-export async function requestPhoneVerification(phoneNumber) {
+    return doc(
 
-    const user = auth.currentUser;
+        db,
+
+        "users",
+
+        uid,
+
+        "private",
+
+        "contact"
+
+    );
+
+}
+
+
+// ============================================================
+// 49. BUSINESS MEMBERSHIP REFERENCE
+// ============================================================
+
+export function getBusinessMembershipReference(
+
+    businessId,
+
+    uid = getCurrentUserId()
+
+) {
+
+    if (!businessId || !uid) {
+
+        throw new Error(
+            "A business ID and user ID are required."
+        );
+
+    }
+
+
+    return doc(
+
+        db,
+
+        "businesses",
+
+        businessId,
+
+        "members",
+
+        uid
+
+    );
+
+}
+
+
+// ============================================================
+// 50. ACCOUNT DELETION REQUEST
+// ============================================================
+
+export async function requestAccountDeletion() {
+
+    const user = getCurrentUser();
 
 
     if (!user) {
 
-        throw new Error("Please sign in first.");
-
-    }
-
-
-    const normalizedPhone = cleanText(
-        phoneNumber,
-        25
-    );
-
-
-    if (!normalizedPhone) {
-
         throw new Error(
-            "Please enter a valid phone number."
+            "Sign in before requesting account deletion."
         );
 
     }
 
 
-    const backend =
-        window.BusinessOSBackend;
+    const service = window.BusinessOSBackend;
 
 
     if (
-        !backend ||
-        typeof backend.requestPhoneVerification !== "function"
+        typeof service?.requestAccountDeletion !== "function"
     ) {
 
         throw new Error(
-            "Phone verification is not yet available."
+            "Secure account deletion has not been configured on the backend yet."
         );
 
     }
 
 
-    const token = await getIdToken(user);
+    const idToken = await getIdToken(
+        user,
+        true
+    );
 
 
-    return backend.requestPhoneVerification({
+    return service.requestAccountDeletion({
 
-        phoneNumber: normalizedPhone,
-
-        idToken: token
+        idToken
 
     });
 
 }
 
 
-export async function confirmPhoneVerification({
-
-    phoneNumber,
-
-    code
-
-} = {}) {
-
-    const user = auth.currentUser;
-
-
-    if (!user) {
-
-        throw new Error("Please sign in first.");
-
-    }
-
-
-    const backend =
-        window.BusinessOSBackend;
-
-
-    if (
-        !backend ||
-        typeof backend.confirmPhoneVerification !== "function"
-    ) {
-
-        throw new Error(
-            "Phone verification is not yet available."
-        );
-
-    }
-
-
-    const token = await getIdToken(user);
-
-
-    return backend.confirmPhoneVerification({
-
-        phoneNumber: cleanText(phoneNumber, 25),
-
-        code: cleanText(code, 10),
-
-        idToken: token
-
-    });
-
-}
-
-
-/* ============================================================
-   38. SPLASH SCREEN STATUS
-============================================================ */
-
-function updateSplashStatus(message, state = "loading") {
-
-    const element =
-
-        document.getElementById("auth-status") ||
-
-        document.getElementById("authStatus") ||
-
-        document.getElementById("loading-message");
-
-
-    if (!element) {
-
-        return;
-
-    }
-
-
-    element.textContent = message;
-
-    element.dataset.state = state;
-
-    element.setAttribute(
-        "aria-live",
-        "polite"
-    );
-
-}
-
-
-/* ============================================================
-   39. SPLASH SCREEN ROUTING
-============================================================ */
-
-/*
-    INDEX.HTML ROUTING
-
-    Signed-in verified account:
-        menu.html
-
-    Signed-in unverified email/password account:
-        verify-email.html
-
-    Returning signed-out user:
-        login.html
-
-    New visitor:
-        signup.html
-*/
-
-
-let splashRoutingStarted = false;
-
+// ============================================================
+// 51. SPLASH SCREEN AUTHENTICATION ROUTING
+// ============================================================
 
 export async function startSplashRouter() {
 
-    if (splashRoutingStarted) {
-
-        return;
-
-    }
-
-
-    splashRoutingStarted = true;
-
-
-    updateSplashStatus(
-        "Connecting securely...",
-        "loading"
-    );
-
-
-    try {
-
-        await persistenceReady;
-
-
-        /*
-            Consume any pending Google redirect result first.
-        */
-
-        try {
-
-            await getRedirectResult(auth);
-
-        } catch (redirectError) {
-
-            console.warn(
-                "No completed Google redirect was found.",
-                redirectError
-            );
-
-        }
-
-
-        const user = await new Promise(
-            (resolve, reject) => {
-
-                let unsubscribe = null;
-
-
-                const stopListening = () => {
-
-                    if (unsubscribe) {
-
-                        unsubscribe();
-
-                    }
-
-                };
-
-
-                unsubscribe = onAuthStateChanged(
-
-                    auth,
-
-                    (currentUser) => {
-
-                        stopListening();
-
-                        resolve(currentUser);
-
-                    },
-
-                    (error) => {
-
-                        stopListening();
-
-                        reject(error);
-
-                    }
-
-                );
-
-            }
-        );
-
-
-        if (user) {
-
-            updateSplashStatus(
-                "Synchronizing your account...",
-                "loading"
-            );
-
-
-            await ensureUserProfile(user);
-
-
-            const needsVerification =
-
-                isEmailPasswordUser(user) &&
-
-                !user.emailVerified;
-
-
-            if (needsVerification) {
-
-                updateSplashStatus(
-                    "Email verification required.",
-                    "warning"
-                );
-
-
-                window.location.replace(
-                    VERIFICATION_PAGE
-                );
-
-
-                return;
-
-            }
-
-
-            updateSplashStatus(
-                "Account synchronized.",
-                "success"
-            );
-
-
-            await new Promise(
-                resolve => setTimeout(resolve, 350)
-            );
-
-
-            window.location.replace(
-                WORKSPACE_PAGE
-            );
-
-
-            return;
-
-        }
-
-
-        const returningUser =
-            readStorage(RETURNING_USER_KEY) === "true";
-
-
-        if (returningUser) {
-
-            updateSplashStatus(
-                "No active session found.",
-                "neutral"
-            );
-
-
-            window.location.replace(
-                LOGIN_PAGE
-            );
-
-
-        } else {
-
-            updateSplashStatus(
-                "Welcome.",
-                "neutral"
-            );
-
-
-            window.location.replace(
-                SIGNUP_PAGE
-            );
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            "BusinessOS authentication error:",
-            error
-        );
-
-
-        updateSplashStatus(
-            "Unable to synchronize. Please try again.",
-            "error"
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   40. AUTOMATIC INDEX.HTML INITIALIZATION
-============================================================ */
-
-/*
-    authentication.js automatically starts the splash
-    authentication process when loaded from index.html.
-
-    On other pages, it only exposes its authentication
-    functions. It does not automatically redirect them.
-*/
-
-
-const currentPage =
-
-    window.location.pathname
+    const page = window.location.pathname
 
         .split("/")
 
@@ -2826,40 +3662,227 @@ const currentPage =
         .toLowerCase();
 
 
-if (
-    currentPage === "" ||
-    currentPage === "index.html"
-) {
+    if (
+        page &&
+        page !== BUSINESSOS_ROUTES.index
+    ) {
 
-    void startSplashRouter();
+        return;
+
+    }
+
+
+    try {
+
+        await firebaseReady;
+
+
+        // Consume any completed Google redirect.
+
+        await completeGoogleRedirect();
+
+
+        const user =
+            await waitForInitialAuthState();
+
+
+        if (user) {
+
+            await reload(user);
+
+
+            if (
+
+                isEmailPasswordUser(user) &&
+
+                !user.emailVerified
+
+            ) {
+
+                window.location.replace(
+                    BUSINESSOS_ROUTES.verification
+                );
+
+
+                return;
+
+            }
+
+
+            try {
+
+                await ensureUserProfile(user);
+
+            } catch (error) {
+
+                console.warn(
+                    "Profile sync will retry after sign-in:",
+                    error
+                );
+
+            }
+
+
+            window.location.replace(
+                BUSINESSOS_ROUTES.workspace
+            );
+
+
+            return;
+
+        }
+
+
+        const returning =
+
+            readStorage(
+                STORAGE_KEYS.returningUser
+            ) === "true";
+
+
+        window.location.replace(
+
+            returning
+
+                ? BUSINESSOS_ROUTES.login
+
+                : BUSINESSOS_ROUTES.signup
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "BusinessOS startup authentication failed:",
+            error
+        );
+
+
+        const status =
+
+            document.getElementById("auth-status") ||
+
+            document.getElementById("authStatus");
+
+
+        if (status) {
+
+            status.textContent =
+                "BusinessOS could not connect. Check your internet connection and try again.";
+
+        }
+
+    }
 
 }
 
 
-/* ============================================================
-   41. CENTRAL BUSINESSOS AUTHENTICATION OBJECT
-============================================================ */
+// ============================================================
+// 52. AUTOMATIC INDEX.HTML INITIALIZATION
+// ============================================================
+
+if (
+    typeof window !== "undefined" &&
+    typeof document !== "undefined"
+) {
+
+    const page = window.location.pathname
+
+        .split("/")
+
+        .pop()
+
+        .toLowerCase();
+
+
+    if (
+        !page ||
+        page === BUSINESSOS_ROUTES.index
+    ) {
+
+        if (document.readyState === "loading") {
+
+            document.addEventListener(
+
+                "DOMContentLoaded",
+
+                () => void startSplashRouter(),
+
+                { once: true }
+
+            );
+
+        } else {
+
+            void startSplashRouter();
+
+        }
+
+    }
+
+}
+
+
+// ============================================================
+// 53. BACKWARDS-COMPATIBLE EXPORT ALIASES
+// ============================================================
 
 /*
-    This object allows other JavaScript modules to access
-    the central authentication service.
+ * These aliases retain compatibility with pages that use
+ * the older BusinessOS authentication function names.
+ */
 
-    Example:
-
-    import {
-        loginWithEmail,
-        getCurrentUserId
-    } from "./authentication.js";
-*/
+export const createAccountWithEmail =
+    registerWithEmail;
 
 
-export const BusinessOSAuth = {
+export const signInWithEmail =
+    loginWithEmail;
+
+
+export const signInWithGoogle =
+    loginWithGoogle;
+
+
+export const refreshEmailVerificationState =
+    refreshEmailVerification;
+
+
+export const signOutBusinessOS =
+    logoutUser;
+
+
+export const captureSignupContext =
+    captureAttributionFromURL;
+
+
+export const getSignupContext =
+    getPendingAttribution;
+
+
+export const clearSignupContext =
+    clearPendingAttribution;
+
+
+export const requireSignedInUser =
+    requireAuthentication;
+
+
+export const BUSINESSOS_AUTH_VERSION =
+    FIREBASE_SDK_VERSION;
+
+
+// ============================================================
+// 54. CENTRAL BUSINESSOS AUTHENTICATION OBJECT
+// ============================================================
+
+export const BusinessOSAuth = Object.freeze({
+
+    app,
 
     auth,
 
     db,
-
-    app,
 
     registerWithEmail,
 
@@ -2869,27 +3892,17 @@ export const BusinessOSAuth = {
 
     completeGoogleRedirect,
 
-    sendPasswordRecoveryEmail,
-
-    resetPassword,
+    sendEmailVerification,
 
     resendEmailVerification,
 
     refreshEmailVerification,
 
-    observeAuthState,
+    completeEmailVerificationFromLink,
 
-    getCurrentUser,
+    sendPasswordRecoveryEmail,
 
-    getCurrentUserId,
-
-    getFirebaseIdToken,
-
-    isAuthenticated,
-
-    isEmailPasswordUser,
-
-    isGoogleUser,
+    resetPassword,
 
     ensureUserProfile,
 
@@ -2899,13 +3912,37 @@ export const BusinessOSAuth = {
 
     updateUserProfile,
 
-    changeAccountEmail,
+    getCurrentUser,
 
-    changeAccountPassword,
+    getCurrentUserId,
+
+    getCurrentUserIdentity,
+
+    getBusinessOSSpecialId,
+
+    getFirebaseIdToken,
+
+    isAuthenticated,
+    
+    isNativeBusinessOSApp,
+
+    isEmailPasswordUser,
+
+    isGoogleUser,
+
+    observeAuthState,
+
+    waitForInitialAuthState,
+
+    requireAuthentication,
+
+    requireVerifiedUser,
 
     logoutUser,
 
-    requireAuthentication,
+    changeAccountEmail,
+
+    changeAccountPassword,
 
     createBusinessDraft,
 
@@ -2915,12 +3952,6 @@ export const BusinessOSAuth = {
 
     getMyBusinesses,
 
-    captureAttributionFromURL,
-
-    getPendingAttribution,
-
-    clearPendingAttribution,
-
     isPhoneVerified,
 
     requireVerifiedPhone,
@@ -2929,13 +3960,13 @@ export const BusinessOSAuth = {
 
     confirmPhoneVerification,
 
-    startSplashRouter,
+    requestAccountDeletion,
 
     getFriendlyError
 
-};
+});
 
 
-/* ============================================================
-   BUSINESSOS AUTHENTICATION SERVICE — END
-============================================================ */
+// ============================================================
+// BUSINESSOS CENTRAL AUTHENTICATION SERVICE - END
+// ============================================================

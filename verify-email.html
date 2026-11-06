@@ -1,0 +1,690 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="theme-color"
+    content="#07152e"
+  >
+
+  <meta
+    name="referrer"
+    content="no-referrer"
+  >
+
+  <title>Verify Your Email | BusinessOS</title>
+
+  <link
+    rel="icon"
+    href="./logo.png"
+    type="image/png"
+  >
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  >
+
+
+  <style>
+
+    :root {
+      --blue: #287cf5;
+      --blue2: #54a0ff;
+      --text: #edf4ff;
+      --muted: #a9bbd5;
+      --border: rgba(255,255,255,.13);
+      --green: #20c997;
+      --red: #ff697d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100svh;
+      width: 100%;
+
+      display: grid;
+      place-items: center;
+
+      padding: 22px 14px;
+      overflow-x: hidden;
+
+      background:
+        radial-gradient(
+          circle at 50% 0,
+          rgba(40,124,245,.22),
+          transparent 42%
+        ),
+        linear-gradient(
+          145deg,
+          #030b19,
+          #0a1b37 58%,
+          #061329
+        );
+
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      text-align: center;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 480px;
+      margin: auto;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 19px;
+    }
+
+    .logo {
+      width: 132px;
+      height: 132px;
+
+      object-fit: contain;
+      border-radius: 27px;
+
+      background: rgba(255,255,255,.04);
+
+      border: 1px solid rgba(84,160,255,.35);
+
+      box-shadow:
+        0 0 35px rgba(40,124,245,.16);
+    }
+
+    .brand {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -.7px;
+    }
+
+    .card {
+      width: 100%;
+      padding: 29px 22px;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 17px;
+
+      background: rgba(13,32,64,.96);
+
+      border: 1px solid var(--border);
+      border-radius: 23px;
+
+      box-shadow: 0 24px 65px rgba(0,0,0,.34);
+
+      backdrop-filter: blur(15px);
+    }
+
+    .icon {
+      width: 76px;
+      height: 76px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 25px;
+
+      background: rgba(40,124,245,.15);
+
+      color: var(--blue2);
+      font-size: 32px;
+    }
+
+    .icon.success {
+      background: rgba(32,201,151,.12);
+      color: var(--green);
+    }
+
+    .icon.error {
+      background: rgba(255,105,125,.12);
+      color: var(--red);
+    }
+
+    h1 {
+      font-size: clamp(22px, 6vw, 29px);
+      line-height: 1.3;
+    }
+
+    p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    .verified-email {
+      color: white;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .benefits {
+      width: 100%;
+      padding: 16px 12px;
+
+      border: 1px solid var(--border);
+      border-radius: 15px;
+
+      background: rgba(255,255,255,.035);
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .benefit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+
+      color: #c8d8f0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .benefit i {
+      width: 18px;
+      color: var(--blue2);
+    }
+
+    .button {
+      width: 100%;
+      min-height: 49px;
+
+      border: 0;
+      border-radius: 13px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+
+      background: linear-gradient(
+        110deg,
+        #1769e8,
+        #398eff
+      );
+
+      color: #fff;
+      text-decoration: none;
+
+      font-weight: 750;
+      font-size: 14px;
+
+      cursor: pointer;
+    }
+
+    .button.secondary {
+      background: rgba(255,255,255,.075);
+      border: 1px solid var(--border);
+    }
+
+    .button[hidden] {
+      display: none !important;
+    }
+
+    .footer {
+      color: #849ab9;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+
+    .footer a {
+      color: #a7caff;
+      text-decoration: none;
+    }
+
+    @media(max-width:380px) {
+
+      .card {
+        padding: 23px 15px;
+      }
+
+      .logo {
+        width: 115px;
+        height: 115px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+  <main class="page">
+
+    <img
+      class="logo"
+      src="./logo.png"
+      alt="BusinessOS logo"
+    >
+
+
+    <div class="brand">
+      BusinessOS
+    </div>
+
+
+    <section class="card">
+
+      <div
+        class="icon"
+        id="statusIcon"
+      >
+        <i class="fa-solid fa-spinner fa-spin"></i>
+      </div>
+
+
+      <h1 id="statusTitle">
+        Checking your verification link
+      </h1>
+
+
+      <p
+        id="statusMessage"
+        role="status"
+        aria-live="polite"
+      >
+        BusinessOS is securely checking this link with Firebase Authentication.
+      </p>
+
+
+      <p
+        id="verifiedEmail"
+        class="verified-email"
+        hidden
+      ></p>
+
+
+      <div class="benefits">
+
+        <div class="benefit">
+          <i class="fa-solid fa-store"></i>
+          Discover businesses, products and services.
+        </div>
+
+        <div class="benefit">
+          <i class="fa-solid fa-comments"></i>
+          Connect with customers, suppliers and partners.
+        </div>
+
+        <div class="benefit">
+          <i class="fa-solid fa-bullhorn"></i>
+          Promote products and business campaigns.
+        </div>
+
+        <div class="benefit">
+          <i class="fa-solid fa-chart-line"></i>
+          Manage business operations and growth.
+        </div>
+
+        <div class="benefit">
+          <i class="fa-solid fa-shield-halved"></i>
+          Keep your account and business identity protected.
+        </div>
+
+      </div>
+
+
+      <a
+        class="button"
+        id="workspaceButton"
+        href="./menu.html"
+        hidden
+      >
+        <i class="fa-solid fa-house"></i>
+        Open BusinessOS
+      </a>
+
+
+      <a
+        class="button"
+        id="loginButton"
+        href="./login.html?verified=1"
+        hidden
+      >
+        <i class="fa-solid fa-right-to-bracket"></i>
+        Sign in to BusinessOS
+      </a>
+
+
+      <a
+        class="button secondary"
+        id="signupButton"
+        href="./signup.html"
+        hidden
+      >
+        <i class="fa-solid fa-user-plus"></i>
+        Return to account registration
+      </a>
+
+    </section>
+
+
+    <footer class="footer">
+
+      <div>
+        BusinessOS · Developed by Code Academy Solution
+      </div>
+
+      <div>
+        Connect. Communicate. Advertise. Manage. Grow.
+      </div>
+
+      <div>
+        <a href="mailto:codeacademysolutions@gmail.com">
+          Contact Code Academy Solution Support
+        </a>
+      </div>
+
+    </footer>
+
+  </main>
+
+
+  <script type="module">
+
+    import {
+
+      firebaseReady,
+
+      getCurrentUser,
+
+      completeEmailVerificationFromLink,
+
+      isEmailPasswordUser,
+
+      waitForInitialAuthState
+
+    } from "./authentication.js";
+
+
+    const $ = (id) =>
+      document.getElementById(id);
+
+
+    // ======================================================
+    // 1. PAGE STATUS
+    // ======================================================
+
+    function setState(
+      type,
+      title,
+      message
+    ) {
+
+      $("statusTitle").textContent =
+        title;
+
+
+      $("statusMessage").textContent =
+        message;
+
+
+      const icon =
+        $("statusIcon");
+
+
+      icon.className = "icon";
+
+
+      if (type === "success") {
+
+        icon.classList.add("success");
+
+        icon.innerHTML =
+          '<i class="fa-solid fa-circle-check"></i>';
+
+      } else if (type === "error") {
+
+        icon.classList.add("error");
+
+        icon.innerHTML =
+          '<i class="fa-solid fa-circle-xmark"></i>';
+
+      } else {
+
+        icon.innerHTML =
+          '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+      }
+
+    }
+
+
+    // ======================================================
+    // 2. SHOW THE CORRECT ACTION BUTTON
+    // ======================================================
+
+    function showOnly(id) {
+
+      for (
+
+        const buttonId of [
+
+          "workspaceButton",
+
+          "loginButton",
+
+          "signupButton"
+
+        ]
+
+      ) {
+
+        $(buttonId).hidden =
+          buttonId !== id;
+
+      }
+
+    }
+
+
+    // ======================================================
+    // 3. COMPLETE EMAIL VERIFICATION
+    // ======================================================
+
+    async function handleVerification() {
+
+      await firebaseReady;
+
+
+      // Wait for Firebase to restore the existing session.
+
+      await waitForInitialAuthState();
+
+
+      setState(
+
+        "loading",
+
+        "Verifying your email",
+
+        "Checking the secure one-time link with Firebase Authentication..."
+
+      );
+
+
+      const result =
+        await completeEmailVerificationFromLink(
+          window.location.href
+        );
+
+
+      if (
+        !result.handled ||
+        !result.verified
+      ) {
+
+        setState(
+
+          "error",
+
+          "Verification link not found",
+
+          "Open the complete verification link directly from the email sent by Firebase. If the link has expired, sign in and request another verification email."
+
+        );
+
+
+        showOnly("signupButton");
+
+        return;
+
+      }
+
+
+      $("verifiedEmail").hidden = false;
+
+      $("verifiedEmail").textContent =
+        result.email;
+
+
+      const currentUser =
+        getCurrentUser();
+
+
+      const canOpenWorkspace = Boolean(
+
+        result.matchesCurrentSession &&
+
+        currentUser &&
+
+        (
+
+          !isEmailPasswordUser(currentUser) ||
+
+          currentUser.emailVerified
+
+        )
+
+      );
+
+
+      if (canOpenWorkspace) {
+
+        setState(
+
+          "success",
+
+          "Email verified successfully!",
+
+          "Your email address has been confirmed by Firebase. Your BusinessOS workspace is ready."
+
+        );
+
+
+        showOnly("workspaceButton");
+
+
+        window.setTimeout(
+
+          () => window.location.replace("./menu.html"),
+
+          1800
+
+        );
+
+      } else {
+
+        setState(
+
+          "success",
+
+          "Your email has been verified!",
+
+          "Firebase has confirmed this email address. Sign in using the same account to continue to your BusinessOS workspace."
+
+        );
+
+
+        showOnly("loginButton");
+
+      }
+
+    }
+
+
+    // ======================================================
+    // 4. HANDLE VERIFICATION ERRORS
+    // ======================================================
+
+    handleVerification().catch((error) => {
+
+      console.error(
+        "BusinessOS email verification failed:",
+        error
+      );
+
+
+      const code =
+        String(error?.code || "");
+
+
+      let message =
+
+        error?.message ||
+
+        "Firebase could not complete this verification request.";
+
+
+      if (code.includes("expired-action-code")) {
+
+        message =
+          "This verification link has expired. Sign in and request a new verification email.";
+
+      }
+
+
+      if (code.includes("invalid-action-code")) {
+
+        message =
+          "This verification link is invalid or has already been used. Sign in and check your account status.";
+
+      }
+
+
+      setState(
+
+        "error",
+
+        "Verification could not be completed",
+
+        message
+
+      );
+
+
+      showOnly("loginButton");
+
+    });
+
+  </script>
+
+</body>
+
+</html>

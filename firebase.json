@@ -1,0 +1,31 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**",
+      ".firebase/**",
+      ".git/**",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "**/*.log",
+      "**/.env",
+      "**/.env.*",
+      "**/*.pem",
+      "**/*.key",
+      "**/*serviceAccount*.json",
+      "**/*service-account*.json",
+      "**/firebase-adminsdk*.json",
+      "firestore.rules",
+      "database.rules.json",
+      "storage.rules",
+      "**/*.rules",
+      "firestore.indexes.json",
+      "**/*.bak",
+      "**/*.backup",
+      "**/*.zip"
+    ]
+  }
+}
