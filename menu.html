@@ -14,20 +14,24 @@
   <link rel="icon" type="image/png" href="./logo.png">
   <link rel="apple-touch-icon" href="./logo.png">
 
-  <!-- Social and messaging-app preview metadata -->
+  <!-- Social and search-preview image metadata: use the public absolute logo URL. -->
+  <link rel="image_src" href="https://business-os-by.web.app/logo.png?v=20261106">
+  <meta itemprop="image" content="https://business-os-by.web.app/logo.png?v=20261106">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="BusinessOS">
   <meta property="og:title" content="BusinessOS — Your Connected Business Workspace">
   <meta property="og:description" content="Connect. Communicate. Advertise. Manage. Grow. Explore the connected BusinessOS workspace.">
   <meta property="og:url" content="https://business-os-by.web.app/menu.html">
-  <meta property="og:image" content="https://business-os-by.web.app/logo.png">
-  <meta property="og:image:secure_url" content="https://business-os-by.web.app/logo.png">
+  <meta property="og:image" content="https://business-os-by.web.app/logo.png?v=20261106">
+  <meta property="og:image:secure_url" content="https://business-os-by.web.app/logo.png?v=20261106">
   <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1000">
+  <meta property="og:image:height" content="1000">
   <meta property="og:image:alt" content="BusinessOS logo">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="BusinessOS — Your Connected Business Workspace">
   <meta name="twitter:description" content="Connect. Communicate. Advertise. Manage. Grow.">
-  <meta name="twitter:image" content="https://business-os-by.web.app/logo.png">
+  <meta name="twitter:image" content="https://business-os-by.web.app/logo.png?v=20261106">
   <meta name="twitter:image:alt" content="BusinessOS logo">
 
   <title>BusinessOS | Workspace</title>
@@ -440,11 +444,18 @@
   <script type="module">
     import {
       requireVerifiedUser,
+      ensureUserProfile,
       getUserProfile,
       observeAuthState,
       signOutBusinessOS,
-      isNativeBusinessOSApp
+      isNativeBusinessOSApp,
+      db
     } from "./authentication.js";
+
+    import {
+      doc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
     const groups = [
       {
@@ -654,6 +665,7 @@
     let currentProfile = null;
     let activeGroupId = "overview";
     let authUnsubscribe = null;
+    let profileUnsubscribe = null;
     let toastTimer = null;
     let searchExpanded = false;
 
@@ -706,12 +718,30 @@
       els.nav.innerHTML = overview + `<div class="side-caption">Modules</div>` + groupButtons;
     }
 
+    function getCurrentDisplayName(user = currentUser, profile = currentProfile) {
+      return profile?.displayName || user?.displayName || (user?.email ? user.email.split("@")[0] : "BusinessOS user");
+    }
+
+    function updateWelcomeHeading() {
+      const heading = document.getElementById("welcomeHeading");
+      if (heading) heading.textContent = `Welcome back, ${getCurrentDisplayName()}.`;
+    }
+
     function setUserDetails(user, profile) {
-      const name = user.displayName || profile?.displayName || (user.email ? user.email.split("@")[0] : "BusinessOS user");
-      const email = user.email || "Signed-in account";
-      const photo = safePhotoURL(user.photoURL || profile?.photoURL || profile?.avatarURL || profile?.profileImageURL);
+      const name = getCurrentDisplayName(user, profile);
+      const email = user.email || profile?.email || "Signed-in account";
+      const photo = safePhotoURL(profile?.photoURL || profile?.avatarURL || profile?.profileImageURL || user.photoURL);
+      const onboarding = profile?.onboardingStatus;
+      const roleLabel = onboarding === "business_created"
+        ? "Business workspace"
+        : onboarding === "complete"
+          ? "Workspace ready"
+          : user.emailVerified
+            ? "Verified account"
+            : "Personal workspace";
+
       els.profileName.textContent = name;
-      els.profileRole.textContent = user.emailVerified ? "Verified account" : "Personal workspace";
+      els.profileRole.textContent = roleLabel;
       els.menuProfileName.textContent = name;
       els.menuProfileEmail.textContent = email;
       els.avatarInitials.textContent = initialsFrom(name);
@@ -729,12 +759,67 @@
         els.avatarInitials.style.display = "block";
       }
       els.platformLabel.textContent = isNativeBusinessOSApp() ? "Native app session" : "Secure workspace session";
+      updateWelcomeHeading();
+    }
+
+    function stopProfileSubscription() {
+      if (typeof profileUnsubscribe === "function") {
+        profileUnsubscribe();
+      }
+      profileUnsubscribe = null;
+    }
+
+    function watchUserProfile(uid) {
+      stopProfileSubscription();
+      if (!uid) return;
+
+      const profileReference = doc(db, "users", uid);
+      profileUnsubscribe = onSnapshot(profileReference, (snapshot) => {
+        if (!currentUser || currentUser.uid !== uid) return;
+        currentProfile = snapshot.exists()
+          ? { uid: snapshot.id, ...snapshot.data() }
+          : null;
+        setUserDetails(currentUser, currentProfile);
+      }, (error) => {
+        console.warn("BusinessOS could not receive live profile updates. The last available account details will remain visible.", error);
+      });
+    }
+
+    async function connectAuthenticatedUser(user, synchronizeProfile = true) {
+      if (!user?.uid) return;
+
+      const userChanged = currentUser?.uid !== user.uid;
+      currentUser = user;
+      if (userChanged) stopProfileSubscription();
+
+      if (synchronizeProfile) {
+        try {
+          currentProfile = await ensureUserProfile(user);
+        } catch (profileSyncError) {
+          console.warn("BusinessOS could not synchronize the latest authentication profile. Attempting to read the existing profile.", profileSyncError);
+          try {
+            currentProfile = await getUserProfile(user.uid);
+          } catch (profileReadError) {
+            console.warn("BusinessOS profile details could not be read. Firebase Authentication account information will be used where available.", profileReadError);
+            currentProfile = null;
+          }
+        }
+      } else if (userChanged || !currentProfile) {
+        try {
+          currentProfile = await getUserProfile(user.uid);
+        } catch (profileReadError) {
+          console.warn("BusinessOS profile details could not be read. Firebase Authentication account information will be used where available.", profileReadError);
+          currentProfile = null;
+        }
+      }
+
+      setUserDetails(currentUser, currentProfile);
+      watchUserProfile(user.uid);
     }
 
     function renderOverview() {
       els.contextTitle.textContent = "Overview";
-      const name = currentUser?.displayName || currentProfile?.displayName || (currentUser?.email ? currentUser.email.split("@")[0] : "there");
-      const safeName = escapeHTML(name);
+      const safeName = escapeHTML(getCurrentDisplayName());
       const moduleCards = groups.map((group, index) => `
         <button class="module-card" type="button" data-group="${group.id}">
           <span class="module-icon" aria-hidden="true">${group.icon}</span>
@@ -747,7 +832,7 @@
         <section class="welcome-panel">
           <div class="welcome-copy">
             <div class="eyebrow">Your connected business space</div>
-            <h1 class="welcome-title">Welcome back, ${safeName}.</h1>
+            <h1 class="welcome-title" id="welcomeHeading">Welcome back, ${safeName}.</h1>
             <p class="welcome-description">Bring your business identity, customers, conversations and daily operations into one organized workspace. Choose a section to get started.</p>
             <div class="welcome-actions">
               <button class="primary-button" type="button" data-group="identity">Set up business identity <span aria-hidden="true">→</span></button>
@@ -893,6 +978,7 @@
       button.disabled = true;
       button.textContent = "Signing out…";
       try {
+        stopProfileSubscription();
         await signOutBusinessOS();
         window.location.replace("login.html");
       } catch (error) {
@@ -954,21 +1040,31 @@
         els.loadingMessage.textContent = "Checking your signed-in account…";
         const user = await requireVerifiedUser({ redirectTo: "login.html?verification=pending" });
         if (!user) return;
-        currentUser = user;
-        try {
-          currentProfile = await getUserProfile(user.uid);
-        } catch (profileError) {
-          console.warn("BusinessOS profile details could not be loaded; showing Firebase account information.", profileError);
-          currentProfile = null;
-        }
-        setUserDetails(currentUser, currentProfile);
+
+        await connectAuthenticatedUser(user, true);
+
         renderNavigation();
         renderOverview();
         els.loading.hidden = true;
         els.app.hidden = false;
         els.main.focus({ preventScroll: true });
-        authUnsubscribe = await observeAuthState((updatedUser) => {
-          if (!updatedUser) window.location.replace("login.html");
+
+        authUnsubscribe = observeAuthState((updatedUser) => {
+          if (!updatedUser) {
+            stopProfileSubscription();
+            window.location.replace("login.html");
+            return;
+          }
+
+          if (updatedUser.uid !== currentUser?.uid) {
+            void connectAuthenticatedUser(updatedUser, true);
+          } else {
+            currentUser = updatedUser;
+            setUserDetails(currentUser, currentProfile);
+          }
+        }, (authError) => {
+          console.error("BusinessOS authentication state listener failed:", authError);
+          showToast("Your account connection could not be refreshed. Check your connection.");
         });
       } catch (error) {
         console.error("BusinessOS workspace could not start:", error);
@@ -979,6 +1075,7 @@
 
     window.addEventListener("beforeunload", () => {
       if (typeof authUnsubscribe === "function") authUnsubscribe();
+      stopProfileSubscription();
     });
 
     void startWorkspace();
